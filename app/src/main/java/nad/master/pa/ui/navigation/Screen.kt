@@ -15,10 +15,9 @@ sealed class Screen(val route: String) {
     object Home        : Screen("home")
     object Quran       : Screen("quran")
     object Dhikr       : Screen("dhikr")
-    // Top-right Account
+    // Top-right Account (Person icon in TopAppBar)
     object Account     : Screen("account")
-    // Auth
-    object Login       : Screen("login")
+    // No Login screen — app uses silent anonymous Firebase Auth
 }
 
 data class BottomNavItem(

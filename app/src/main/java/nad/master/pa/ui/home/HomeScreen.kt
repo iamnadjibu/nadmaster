@@ -44,7 +44,7 @@ import nad.master.pa.data.model.Session
 import nad.master.pa.data.model.SessionCategory
 import nad.master.pa.data.model.SessionStatus
 import nad.master.pa.ui.theme.*
-import java.text.SimpleDateFormat
+import nad.master.pa.data.local.HijriDateHelper
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,6 +63,8 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = {
+                    val hijriDate = remember { HijriDateHelper.todayHijriString() }
+                    val sawnInfo  = remember { HijriDateHelper.isSawnRecommendedToday() }
                     Column {
                         Text(
                             text  = "NAD MASTER",
@@ -72,10 +74,17 @@ fun HomeScreen(
                             )
                         )
                         Text(
-                            text  = "السلام عليكم، NAD",
+                            text  = hijriDate,
                             style = MaterialTheme.typography.bodySmall,
                             color = WarmCream.copy(alpha = 0.7f)
                         )
+                        sawnInfo?.let {
+                            Text(
+                                text  = "🌙 ${it.title}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = IslamicGreen.copy(alpha = 0.8f)
+                            )
+                        }
                     }
                 },
                 actions = {

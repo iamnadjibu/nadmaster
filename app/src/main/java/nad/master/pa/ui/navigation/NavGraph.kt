@@ -7,7 +7,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import nad.master.pa.ui.account.AccountScreen
-import nad.master.pa.ui.auth.LoginScreen
 import nad.master.pa.ui.dashboard.DashboardScreen
 import nad.master.pa.ui.dhikr.DhikrScreen
 import nad.master.pa.ui.home.HomeScreen
@@ -25,59 +24,45 @@ fun NadNavGraph(
         startDestination = startDestination,
         enterTransition  = {
             slideIntoContainer(
-                towards   = AnimatedContentTransitionScope.SlideDirection.Left,
+                towards       = AnimatedContentTransitionScope.SlideDirection.Left,
                 animationSpec = tween(300)
             )
         },
         exitTransition = {
             slideOutOfContainer(
-                towards   = AnimatedContentTransitionScope.SlideDirection.Left,
+                towards       = AnimatedContentTransitionScope.SlideDirection.Left,
                 animationSpec = tween(300)
             )
         },
         popEnterTransition = {
             slideIntoContainer(
-                towards   = AnimatedContentTransitionScope.SlideDirection.Right,
+                towards       = AnimatedContentTransitionScope.SlideDirection.Right,
                 animationSpec = tween(300)
             )
         },
         popExitTransition = {
             slideOutOfContainer(
-                towards   = AnimatedContentTransitionScope.SlideDirection.Right,
+                towards       = AnimatedContentTransitionScope.SlideDirection.Right,
                 animationSpec = tween(300)
             )
         }
     ) {
-        composable(Screen.Login.route) {
-            LoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Login.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-
+        // No login route — app always starts at Home via anonymous auth
         composable(Screen.Home.route) {
             HomeScreen(onNavigateToAccount = onNavigateToAccount)
         }
-
         composable(Screen.Dashboard.route) {
             DashboardScreen()
         }
-
         composable(Screen.Quran.route) {
             QuranScreen()
         }
-
         composable(Screen.Schedule.route) {
             ScheduleScreen()
         }
-
         composable(Screen.Dhikr.route) {
             DhikrScreen()
         }
-
         composable(Screen.Account.route) {
             AccountScreen(onBack = { navController.popBackStack() })
         }

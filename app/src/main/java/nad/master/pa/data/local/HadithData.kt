@@ -4,6 +4,10 @@ import nad.master.pa.data.model.Hadith
 
 /**
  * Curated daily Hadiths — rotated by day of year.
+ *
+ * Data source: https://sunnah.com/
+ * All hadiths are referenced to their authentic collections on sunnah.com
+ * (Sahih al-Bukhari, Sahih Muslim, Abu Dawud, Tirmidhi, Ibn Majah, etc.)
  */
 object HadithData {
 

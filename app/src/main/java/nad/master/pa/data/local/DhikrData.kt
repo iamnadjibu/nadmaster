@@ -5,6 +5,11 @@ import nad.master.pa.data.model.DhikrItem
 
 /**
  * Authentic Islamic Dhikr and Adhkar — curated static data.
+ *
+ * Sources:
+ *  - Adhkar & Duas: https://sunnah.com/ (verified hadith references)
+ *  - Quranic Duas: https://quran.com/ (verse references verified)
+ *  All Arabic texts are cross-referenced against sunnah.com and quran.com.
  */
 object DhikrData {
 

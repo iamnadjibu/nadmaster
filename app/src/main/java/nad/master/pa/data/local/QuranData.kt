@@ -6,6 +6,10 @@ import nad.master.pa.data.model.SurahData
 /**
  * Complete static Quran data — 114 Surahs with Juzz mapping.
  * This is immutable reference data that never changes.
+ *
+ * Source: https://quran.com/
+ * Surah names, verse counts, and Juzz numbers are verified against quran.com.
+ * Arabic names use standard Uthmani transliteration as on quran.com.
  */
 object QuranData {
 
