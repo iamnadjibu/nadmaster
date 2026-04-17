@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import nad.master.pa.ui.theme.*
@@ -77,7 +78,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 style = MaterialTheme.typography.displaySmall.copy(
                     fontWeight    = FontWeight.Bold,
                     color         = LightCream,
-                    letterSpacing = 6.sp_compat
+                    letterSpacing = 6.sp
                 )
             )
             Text(
@@ -194,7 +195,3 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     }
 }
 
-// Helper workaround for letterSpacing
-private val sp_compat get() = androidx.compose.ui.unit.TextUnit(
-    3f, androidx.compose.ui.unit.TextUnitType.Sp
-)

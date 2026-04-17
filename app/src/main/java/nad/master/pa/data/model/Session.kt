@@ -14,7 +14,7 @@ data class Session(
     val title: String = "",
     val description: String = "",
     val type: SessionType = SessionType.FLEXIBLE,
-    val category: SessionCategory = SessionCategory.PERSONAL,
+    val category: SessionCategory = SessionCategory.PERSONAL_GOALS,
     val startTime: Timestamp = Timestamp.now(),
     val endTime: Timestamp = Timestamp.now(),
     val date: String = "",          // "yyyy-MM-dd"

@@ -27,8 +27,9 @@ import nad.master.pa.data.model.Goal
 import nad.master.pa.data.model.GoalCategory
 import nad.master.pa.data.model.GoalPriority
 import nad.master.pa.ui.theme.*
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
     val state    by viewModel.uiState.collectAsStateWithLifecycle()
@@ -276,6 +277,7 @@ private fun CompletedGoalCard(goal: Goal) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AddGoalForm(
     form: NewGoalForm,

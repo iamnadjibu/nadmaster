@@ -43,6 +43,7 @@ import nad.master.pa.data.model.Goal
 import nad.master.pa.data.model.Session
 import nad.master.pa.data.model.SessionCategory
 import nad.master.pa.data.model.SessionStatus
+import nad.master.pa.data.model.getSessionColor
 import nad.master.pa.ui.theme.*
 import nad.master.pa.data.local.HijriDateHelper
 import java.time.LocalDate

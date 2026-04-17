@@ -36,8 +36,7 @@ class GoalRepository @Inject constructor(
             .whereEqualTo("isCompleted", true)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) { close(error); return@addSnapshotListener }
-                val goals = snapshot?.toObjects(Goal::class.java) ?: emptyList()
-                    .sortedByDescending { (it as Goal).completedDate }
+                val goals = snapshot?.toObjects(Goal::class.java)?.sortedByDescending { it.completedDate } ?: emptyList()
                 trySend(goals)
             }
         awaitClose { listener.remove() }
