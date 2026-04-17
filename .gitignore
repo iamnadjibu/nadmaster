@@ -1,0 +1,30 @@
+# NAD MASTER Android App
+# Personal Assistant | Developed by NAD MASTER
+
+# IDE & Build files
+.gradle/
+local.properties
+*.iml
+*.DS_Store
+.idea/
+.externalNativeBuild/
+.cxx/
+
+# Build outputs
+/build/
+app/build/
+
+# Keystore
+*.jks
+*.keystore
+key.properties
+
+# Local environment
+local.properties
+
+# Google Services (keep app/google-services.json but not root-level)
+google-services.json
+
+# Test results
+/captures/
+*.hprof
