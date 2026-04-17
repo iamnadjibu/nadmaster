@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-# ── Environment ───────────────────────────────────────────────────────────────
 env:
   FIREBASE_PROJECT_ID: nadmaster
 
@@ -29,18 +28,33 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      # Write google-services.json from GitHub Secret
       - name: Write google-services.json
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+
+      # Extract gradle-wrapper.jar from the Gradle distribution zip
+      - name: Download Gradle Wrapper JAR
         run: |
-          echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          mkdir -p gradle/wrapper
+          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O /tmp/gradle.zip
+          unzip -jo /tmp/gradle.zip "gradle-8.9/lib/gradle-wrapper-*.jar" -d /tmp/gwjar 2>/dev/null || \
+          unzip -jo /tmp/gradle.zip "*/gradle-wrapper.jar" -d /tmp/gwjar 2>/dev/null || true
+          # Fallback: extract any jar that looks like the wrapper
+          JAR=$(find /tmp/gwjar -name "*.jar" | head -1)
+          if [ -n "$JAR" ]; then
+            cp "$JAR" gradle/wrapper/gradle-wrapper.jar
+          else
+            # Direct download from gradle GitHub releases
+            wget -q "https://github.com/gradle/gradle/releases/download/v8.9.0/gradle-8.9-wrapper.jar" \
+              -O gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+            curl -fsSL "https://search.maven.org/remotecontent?filepath=org/gradle/gradle-cli-main/8.9/gradle-cli-main-8.9.jar" \
+              -o gradle/wrapper/gradle-wrapper.jar
+          fi
+          echo "Wrapper JAR size: $(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
@@ -53,12 +67,12 @@ jobs:
           retention-days: 30
 
   # ────────────────────────────────────────────────────────────────────────────
-  # JOB 2: Deploy Firestore Rules & Indexes to Firebase
+  # JOB 2: Deploy Firestore Rules & Indexes
   # ────────────────────────────────────────────────────────────────────────────
   deploy-firestore:
     name: Deploy Firestore Rules & Indexes
     runs-on: ubuntu-latest
-    needs: build          # Only deploy after a successful build
+    needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:
@@ -81,7 +95,7 @@ jobs:
             --non-interactive
 
   # ────────────────────────────────────────────────────────────────────────────
-  # JOB 3: Distribute APK via Firebase App Distribution
+  # JOB 3: Firebase App Distribution
   # ────────────────────────────────────────────────────────────────────────────
   distribute:
     name: Firebase App Distribution
@@ -107,12 +121,10 @@ jobs:
       - name: Upload APK to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId:          ${{ secrets.FIREBASE_APP_ID }}
+          appId:                  ${{ secrets.FIREBASE_APP_ID }}
           serviceCredentialsFile: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
-          groups:         nad-testers
-          file:           artifacts/app-debug.apk
-          releaseNotes:   |
-            NAD MASTER — Build from commit ${{ github.sha }}
-            Branch: ${{ github.ref_name }}
-            Pushed by: ${{ github.actor }}
+          groups:                 nad-testers
+          file:                   artifacts/app-debug.apk
+          releaseNotes: |
+            NAD MASTER — Build ${{ github.sha }}
             ${{ github.event.head_commit.message }}
