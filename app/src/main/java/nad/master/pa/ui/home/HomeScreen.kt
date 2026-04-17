@@ -45,7 +45,10 @@ import nad.master.pa.data.model.SessionCategory
 import nad.master.pa.data.model.SessionStatus
 import nad.master.pa.ui.theme.*
 import nad.master.pa.data.local.HijriDateHelper
-import java.util.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -281,7 +284,6 @@ private fun StatCircle(label: String, value: String, color: Color) {
 @Composable
 private fun WeeklyBarChart(performances: List<DailyPerformance>) {
     val maxVal = performances.maxOfOrNull { it.sessionsScheduled }?.toFloat()?.coerceAtLeast(1f) ?: 1f
-    val dayLabels = listOf("Su","Mo","Tu","We","Th","Fr","Sa")
 
     Canvas(modifier = Modifier.fillMaxWidth().height(80.dp)) {
         val barWidth = size.width / (performances.size * 2f)
@@ -314,14 +316,13 @@ private fun WeeklyBarChart(performances: List<DailyPerformance>) {
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
         performances.take(7).forEach { perf ->
-            val date = try {
-                val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                val d   = sdf.parse(perf.date)
-                val cal = Calendar.getInstance().apply { time = d ?: Date() }
-                dayLabels[cal.get(Calendar.DAY_OF_WEEK) - 1]
+            val dayLabel = try {
+                val date = LocalDate.parse(perf.date, DateTimeFormatter.ISO_LOCAL_DATE)
+                date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault())
+                    .take(2)
             } catch (e: Exception) { "?" }
             Text(
-                text  = date,
+                text  = dayLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = WarmCream.copy(alpha = 0.5f)
             )

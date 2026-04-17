@@ -22,8 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.launch
 import nad.master.pa.data.model.Goal
 import nad.master.pa.ui.theme.*
 
@@ -34,7 +32,6 @@ fun AccountScreen(
     onBack: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val auth  = remember { FirebaseAuth.getInstance() }
 
     Scaffold(
         containerColor = DarkBrown,
@@ -52,9 +49,8 @@ fun AccountScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { auth.signOut(); onBack() }) {
-                        Icon(Icons.Filled.Logout, "Sign Out", tint = WarmCream.copy(alpha = 0.6f))
-                    }
+                    // No sign-out button — this app uses silent anonymous auth.
+                    // Signing out would orphan the Firestore data.
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBrown)
             )
@@ -310,7 +306,7 @@ private fun WeeklyGoalHighlightRow(goal: Goal) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape    = RoundedCornerShape(12.dp),
-        colors   = CardDefaults.cardCards(containerColor = MediumBrown)
+        colors   = CardDefaults.cardColors(containerColor = MediumBrown)
     ) {
         Row(
             modifier = Modifier.padding(14.dp).fillMaxWidth(),
@@ -331,6 +327,3 @@ private fun WeeklyGoalHighlightRow(goal: Goal) {
     }
 }
 
-// typo fix helper
-private fun CardDefaults.cardCards(containerColor: androidx.compose.ui.graphics.Color) =
-    CardDefaults.cardColors(containerColor = containerColor)

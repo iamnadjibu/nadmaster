@@ -330,9 +330,12 @@ private fun AddGoalForm(
             )
         }
 
-        // Category chips
+        // Category chips — using Compose Foundation FlowRow (no Accompanist needed)
         Text("Category", style = MaterialTheme.typography.bodySmall, color = WarmCream.copy(alpha = 0.7f))
-        com.google.accompanist.flowlayout.FlowRow(mainAxisSpacing = 8.dp, crossAxisSpacing = 8.dp) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement   = Arrangement.spacedBy(8.dp)
+        ) {
             GoalCategory.entries.forEach { cat ->
                 FilterChip(
                     selected = form.category == cat,
