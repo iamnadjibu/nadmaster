@@ -93,7 +93,7 @@ dependencies {
     ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     // Firebase BOM
-    implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-auth")
