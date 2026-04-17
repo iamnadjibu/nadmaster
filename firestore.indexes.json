@@ -39,13 +39,6 @@
         { "fieldPath": "startDate", "order": "ASCENDING" },
         { "fieldPath": "endDate",   "order": "ASCENDING" }
       ]
-    },
-    {
-      "collectionGroup": "performance",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "date", "order": "ASCENDING" }
-      ]
     }
   ],
   "fieldOverrides": []
