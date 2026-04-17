@@ -19,11 +19,11 @@ app/build/
 *.keystore
 key.properties
 
-# Local environment
-local.properties
-
-# Google Services (keep app/google-services.json but not root-level)
-google-services.json
+# Google Services
+# app/google-services.json is tracked in Git so Gradle can compile locally.
+# In CI it is overwritten from the GOOGLE_SERVICES_JSON GitHub secret.
+# Only ignore an accidental root-level copy:
+/google-services.json
 
 # Test results
 /captures/

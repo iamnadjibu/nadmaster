@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "892679634314",
+    "project_id": "nadmaster",
+    "storage_bucket": "nadmaster.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:892679634314:android:6d88578ec21a6d26e4dc73",
+        "android_client_info": {
+          "package_name": "nad.master.pa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBJpFL-rbGRl6eW7erGnsmMvDOiYyI0rh4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
