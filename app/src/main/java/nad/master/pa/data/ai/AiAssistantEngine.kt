@@ -32,7 +32,7 @@ class AiAssistantEngine @Inject constructor() {
 
     private val generativeModel by lazy {
         GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            modelName = "gemini-2.5-flash",
             // The API key is securely compiled into the app via local.properties -> BuildConfig
             apiKey = BuildConfig.GEMINI_API_KEY,
             generationConfig = generationConfig {
@@ -44,7 +44,7 @@ class AiAssistantEngine @Inject constructor() {
 
     private val disciplineModel by lazy {
         GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            modelName = "gemini-2.5-flash",
             apiKey = BuildConfig.GEMINI_API_KEY,
             generationConfig = generationConfig {
                 temperature = 0.5f
@@ -183,7 +183,7 @@ class AiAssistantEngine @Inject constructor() {
             response.text?.trim() ?: "Keep pushing forward!"
         } catch (e: Exception) {
             e.printStackTrace()
-            "AI DEBUG ERROR (Insight): ${e.localizedMessage ?: "Unknown failure"}"
+            "Unable to generate discipline insights right now."
         }
     }
 
