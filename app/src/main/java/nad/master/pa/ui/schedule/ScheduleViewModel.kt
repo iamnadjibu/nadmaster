@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import nad.master.pa.data.model.Session
 import nad.master.pa.data.repository.SessionRepository
@@ -30,9 +31,21 @@ data class ScheduleUiState(
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
+    private val performanceRepository: nad.master.pa.data.repository.PerformanceRepository,
+    private val quranRepository: nad.master.pa.data.repository.QuranRepository,
     private val schedulingEngine: SchedulingEngine,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    private suspend fun refreshDiscipline() {
+        try {
+            val sessions = sessionRepository.getTodaySessions().first()
+            val portions = quranRepository.getDailyPortions().first()
+            val today = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+            val pages = portions.filter { it.date == today }.sumOf { it.pagesCount.toDouble() }.toFloat()
+            performanceRepository.recomputeTodayPerformance(sessions, pages)
+        } catch (e: Exception) { Log.e("ScheduleVM", "refreshDiscipline failed", e) }
+    }
 
     companion object {
         private const val TAG = "ScheduleVM"
@@ -137,6 +150,7 @@ class ScheduleViewModel @Inject constructor(
                 // Clear the needsConfirmation flag
                 val session = _uiState.value.sessions.find { it.id == sessionId } ?: return@launch
                 sessionRepository.updateSession(session.copy(needsConfirmation = false))
+                refreshDiscipline()
             } catch (e: Exception) {
                 Log.e(TAG, "confirmSession: FAILED", e)
             }
@@ -147,6 +161,7 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 sessionRepository.deleteSession(sessionId)
+                refreshDiscipline()
             } catch (e: Exception) {
                 Log.e(TAG, "declineSession: FAILED", e)
             }
@@ -157,6 +172,7 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 sessionRepository.deleteSession(sessionId)
+                refreshDiscipline()
             } catch (e: Exception) {
                 Log.e(TAG, "deleteSession: FAILED", e)
             }
@@ -167,6 +183,7 @@ class ScheduleViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 sessionRepository.updateSession(session)
+                refreshDiscipline()
             } catch (e: Exception) {
                 Log.e(TAG, "updateSession: FAILED", e)
             }

@@ -107,22 +107,26 @@ class SessionRepository @Inject constructor(
     }
 
     private fun scheduleCompletionCheck(session: Session) {
-        if (session.status != SessionStatus.UPCOMING) {
-            SessionCompletionWorker.cancelCheck(context, session.id)
-            return
-        }
-        
-        val endTime = LocalDateTime.ofInstant(session.endTime.toDate().toInstant(), ZoneId.systemDefault())
-        val now = LocalDateTime.now()
-        val delay = Duration.between(now, endTime).toMinutes()
-        
-        if (delay > -60) { // Schedule if not older than an hour
-            SessionCompletionWorker.scheduleCompletionCheck(
-                context,
-                session.id,
-                session.title,
-                delay.coerceAtLeast(0)
-            )
+        try {
+            if (session.status != SessionStatus.UPCOMING) {
+                SessionCompletionWorker.cancelCheck(context, session.id)
+                return
+            }
+            
+            val endTime = LocalDateTime.ofInstant(session.endTime.toDate().toInstant(), ZoneId.systemDefault())
+            val now = LocalDateTime.now()
+            val delay = Duration.between(now, endTime).toMinutes()
+            
+            if (delay > -60) { // Schedule if not older than an hour
+                SessionCompletionWorker.scheduleCompletionCheck(
+                    context,
+                    session.id,
+                    session.title,
+                    delay.coerceAtLeast(0)
+                )
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SessionRepo", "scheduleCompletionCheck FAILED", e)
         }
     }
 

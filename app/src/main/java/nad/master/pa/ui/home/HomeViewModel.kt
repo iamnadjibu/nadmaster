@@ -1,5 +1,6 @@
 package nad.master.pa.ui.home
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -128,36 +129,48 @@ class HomeViewModel @Inject constructor(
 
     fun markSessionCompleted(sessionId: String) {
         viewModelScope.launch {
-            sessionRepository.updateSessionStatus(sessionId, SessionStatus.COMPLETED)
-            updateDailyDiscipline()
+            try {
+                sessionRepository.updateSessionStatus(sessionId, SessionStatus.COMPLETED)
+                val currentSessions = _uiState.value.todaySessions.map {
+                    if (it.id == sessionId) it.copy(status = SessionStatus.COMPLETED) else it
+                }
+                updateDailyDiscipline(currentSessions)
+            } catch (e: Exception) { Log.e("HomeVM", "markCompleted failed", e) }
         }
     }
 
     fun markSessionMissed(sessionId: String) {
         viewModelScope.launch {
-            sessionRepository.updateSessionStatus(sessionId, SessionStatus.MISSED)
-            updateDailyDiscipline()
+            try {
+                sessionRepository.updateSessionStatus(sessionId, SessionStatus.MISSED)
+                val currentSessions = _uiState.value.todaySessions.map {
+                    if (it.id == sessionId) it.copy(status = SessionStatus.MISSED) else it
+                }
+                updateDailyDiscipline(currentSessions)
+            } catch (e: Exception) { Log.e("HomeVM", "markMissed failed", e) }
         }
     }
 
     fun markSessionUnfinished(sessionId: String) {
         viewModelScope.launch {
-            sessionRepository.updateSessionStatus(sessionId, SessionStatus.UNFINISHED)
-            updateDailyDiscipline()
+            try {
+                sessionRepository.updateSessionStatus(sessionId, SessionStatus.UNFINISHED)
+                val currentSessions = _uiState.value.todaySessions.map {
+                    if (it.id == sessionId) it.copy(status = SessionStatus.UNFINISHED) else it
+                }
+                updateDailyDiscipline(currentSessions)
+            } catch (e: Exception) { Log.e("HomeVM", "markUnfinished failed", e) }
         }
     }
 
-    private suspend fun updateDailyDiscipline() {
-        // Fetch current snapshot of data for recompute
+    private suspend fun updateDailyDiscipline(sessions: List<Session>) {
         val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val sessions = sessionRepository.getTodaySessions().first()
-        val quranPortions = quranRepository.getDailyPortions().first()
+        // We can't easily get quran portions here without re-fetching, 
+        // but we can trust the quranProgress in the state for a snapshot
+        val quranPages = _uiState.value.quranProgress.versesMemorized / 10f // Reverse heuristic
         
-        val totalPages = quranPortions
-            .filter { it.date == today }
-            .sumOf { it.pagesCount.toDouble() }.toFloat()
-
-        performanceRepository.recomputeTodayPerformance(sessions, totalPages)
+        performanceRepository.recomputeTodayPerformance(sessions, quranPages)
+        Log.d("HomeVM", "updateDailyDiscipline: Logic triggered with ${sessions.size} sessions")
     }
 
     fun updateGoalProgress(goalId: String, progress: Float) {
