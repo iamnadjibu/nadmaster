@@ -15,7 +15,14 @@ class GoalRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) {
-    private val uid get() = auth.currentUser?.uid ?: ""
+    private val uid: String
+        get() {
+            val id = auth.currentUser?.uid
+            if (id.isNullOrBlank()) {
+                throw IllegalStateException("User ID is missing. Document references must have an even number of segments.")
+            }
+            return id
+        }
     private val goalsRef get() = firestore.collection("users").document(uid).collection("goals")
 
     /** Real-time stream of all active (not completed) goals. */

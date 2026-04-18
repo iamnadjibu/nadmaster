@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,11 +45,23 @@ private fun NadMasterRoot() {
     val auth          = remember { FirebaseAuth.getInstance() }
 
     // Sign in anonymously and silently — no login screen, ever.
-    // This personal app is single-user; the anonymous UID is stable per install.
     var authReady by remember { mutableStateOf(auth.currentUser != null) }
+    var authError by remember { mutableStateOf<String?>(null) }
+
+    fun trySignIn() {
+        authError = null
+        auth.signInAnonymously().addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                authReady = true
+            } else {
+                authError = task.exception?.message ?: "Authentication failed"
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         if (auth.currentUser == null) {
-            auth.signInAnonymously().addOnCompleteListener { authReady = true }
+            trySignIn()
         }
     }
 
@@ -61,10 +74,34 @@ private fun NadMasterRoot() {
     if (!authReady) {
         // Splash / loading state while anonymous sign-in completes
         Box(
-            modifier          = Modifier.fillMaxSize(),
+            modifier          = Modifier.fillMaxSize().background(DarkBrown),
             contentAlignment  = Alignment.Center
         ) {
-            CircularProgressIndicator(color = WarmCream)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                if (authError != null) {
+                    Text(
+                        text = "Authentication Error",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = CriticalRed
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = authError!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = WarmCream.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Button(
+                        onClick = { trySignIn() },
+                        colors = ButtonDefaults.buttonColors(containerColor = WarmCream, contentColor = DarkBrown)
+                    ) {
+                        Text("Retry")
+                    }
+                } else {
+                    CircularProgressIndicator(color = WarmCream)
+                }
+            }
         }
         return
     }

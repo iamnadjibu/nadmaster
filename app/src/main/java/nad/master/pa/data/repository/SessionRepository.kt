@@ -19,7 +19,14 @@ class SessionRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val auth: FirebaseAuth
 ) {
-    private val uid get() = auth.currentUser?.uid ?: ""
+    private val uid: String
+        get() {
+            val id = auth.currentUser?.uid
+            if (id.isNullOrBlank()) {
+                throw IllegalStateException("User ID is missing. Document references must have an even number of segments.")
+            }
+            return id
+        }
     private val sessionsRef get() = firestore.collection("users").document(uid).collection("sessions")
 
     /** Real-time stream of all sessions for a given date (yyyy-MM-dd). */
