@@ -13,6 +13,8 @@ import nad.master.pa.data.model.Goal
 import nad.master.pa.data.model.GoalCategory
 import nad.master.pa.data.model.GoalPriority
 import nad.master.pa.data.repository.GoalRepository
+import nad.master.pa.data.repository.SessionRepository
+import nad.master.pa.data.ai.AiAssistantEngine
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -22,7 +24,10 @@ data class DashboardUiState(
     val activeGoals: List<Goal> = emptyList(),
     val completedGoals: List<Goal> = emptyList(),
     val showAddGoalSheet: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val showAiSheet: Boolean = false,
+    val isAiLoading: Boolean = false,
+    val disciplineInsight: String? = null
 )
 
 data class NewGoalForm(
@@ -36,7 +41,9 @@ data class NewGoalForm(
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
-    private val goalRepository: GoalRepository
+    private val goalRepository: GoalRepository,
+    private val sessionRepository: SessionRepository,
+    private val aiAssistantEngine: AiAssistantEngine
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -45,8 +52,25 @@ class DashboardViewModel @Inject constructor(
     private val _goalForm = MutableStateFlow(NewGoalForm())
     val goalForm: StateFlow<NewGoalForm> = _goalForm.asStateFlow()
 
+    private val _aiRequest = MutableStateFlow("")
+    val aiRequest: StateFlow<String> = _aiRequest.asStateFlow()
+
     init {
         loadGoals()
+        loadDisciplineInsight()
+    }
+
+    private fun loadDisciplineInsight() {
+        viewModelScope.launch {
+            try {
+                val missed = sessionRepository.getMissedSessionsSince(7)
+                val completed = sessionRepository.getCompletedSessionsSince(7)
+                val insight = aiAssistantEngine.analyzeDiscipline(completed, missed)
+                _uiState.value = _uiState.value.copy(disciplineInsight = insight)
+            } catch (e: Exception) {
+                // Ignore silent PA failures
+            }
+        }
     }
 
     private fun loadGoals() {
@@ -69,6 +93,28 @@ class DashboardViewModel @Inject constructor(
 
     fun showAddGoalSheet()  { _uiState.value = _uiState.value.copy(showAddGoalSheet = true) }
     fun hideAddGoalSheet()  { _uiState.value = _uiState.value.copy(showAddGoalSheet = false); _goalForm.value = NewGoalForm() }
+
+    fun showAiSheet() { _uiState.value = _uiState.value.copy(showAiSheet = true) }
+    fun hideAiSheet() { _uiState.value = _uiState.value.copy(showAiSheet = false, isAiLoading = false); _aiRequest.value = "" }
+    fun updateAiRequest(req: String) { _aiRequest.value = req }
+
+    fun submitAiRequest() {
+        val req = _aiRequest.value
+        if (req.isBlank()) return
+        
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isAiLoading = true)
+            try {
+                val generatedSessions = aiAssistantEngine.scheduleGoal(req)
+                generatedSessions.forEach { session ->
+                    sessionRepository.addSession(session)
+                }
+                hideAiSheet()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isAiLoading = false, error = e.message)
+            }
+        }
+    }
 
     fun updateFormTitle(value: String)       { _goalForm.value = _goalForm.value.copy(title = value) }
     fun updateFormDescription(value: String) { _goalForm.value = _goalForm.value.copy(description = value) }

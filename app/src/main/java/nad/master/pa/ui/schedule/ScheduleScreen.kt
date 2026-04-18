@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -34,6 +35,11 @@ import nad.master.pa.data.scheduler.WeekInfo
 import nad.master.pa.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +58,11 @@ fun ScheduleScreen(viewModel: ScheduleViewModel = hiltViewModel()) {
                     )
                 },
                 actions = {
+                    if (state.canSeedRoutine) {
+                        IconButton(onClick = viewModel::seedRoutine) {
+                            Icon(Icons.Filled.Download, "Seed Routine", tint = InfoBlue)
+                        }
+                    }
                     IconButton(onClick = viewModel::runScheduleAdjustment) {
                         Icon(Icons.Filled.AutoFixHigh, "Adjust Schedule", tint = WarmCream)
                     }
@@ -128,21 +139,8 @@ fun ScheduleScreen(viewModel: ScheduleViewModel = hiltViewModel()) {
                     }
                 }
             } else {
-                // Group sessions by day
-                val sessionsByDay = state.sessions.groupBy { it.date }.toSortedMap()
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 32.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    sessionsByDay.forEach { (date, daySessions) ->
-                        item {
-                            DayHeader(date = date)
-                        }
-                        items(daySessions.sortedBy { it.startTime.seconds }) { session ->
-                            ScheduleSessionRow(session = session)
-                        }
-                    }
+                state.selectedWeekInfo?.startLocalDate?.let { startDate ->
+                    WeeklyTimetable(sessions = state.sessions, startDate = startDate)
                 }
             }
         }
@@ -182,7 +180,7 @@ private fun WeekSelectorBar(
                         Text(
                             text  = when {
                                 offset == 0 -> "WEEK 0"
-                                offset > 0  -> "WEEK +$offset"
+                                offset > 0  -> "WEEK $offset"
                                 else        -> "WEEK $offset"
                             },
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
@@ -211,112 +209,148 @@ private fun WeekSelectorBar(
 }
 
 @Composable
-private fun DayHeader(date: String) {
-    val dayName = try {
-        val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val d   = sdf.parse(date)
-        val out = SimpleDateFormat("EEEE, MMM d", Locale.getDefault())
-        out.format(d ?: Date())
-    } catch (e: Exception) { date }
+fun WeeklyTimetable(sessions: List<Session>, startDate: LocalDate) {
+    val scrollStateX = rememberScrollState()
+    val scrollStateY = rememberScrollState()
 
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    val hourHeight = 80.dp
+    val dayWidth = 120.dp
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(DarkBrown)
     ) {
-        HorizontalDivider(modifier = Modifier.weight(1f), color = Divider)
-        Text(
-            text  = dayName,
-            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, color = WarmCream.copy(alpha = 0.5f))
-        )
-        HorizontalDivider(modifier = Modifier.weight(1f), color = Divider)
-    }
-}
-
-@Composable
-private fun ScheduleSessionRow(session: Session) {
-    val sessionColor = Color(session.getSessionColor())
-    val statusAlpha  = if (session.status == SessionStatus.COMPLETED) 0.5f else 1f
-
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape    = RoundedCornerShape(14.dp),
-        colors   = CardDefaults.cardColors(containerColor = MediumBrown)
-    ) {
+        // Fixed Top Header (Days)
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 50.dp) // space for time column
+                .horizontalScroll(scrollStateX)
         ) {
-            // Color stripe
+            for (i in 0 until 7) {
+                val day = startDate.plusDays(i.toLong())
+                val isToday = day == LocalDate.now()
+                Box(
+                    modifier = Modifier
+                        .width(dayWidth)
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = day.format(DateTimeFormatter.ofPattern("EEE dd")),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isToday) WarningAmber else WarmCream
+                        )
+                    )
+                }
+            }
+        }
+        
+        HorizontalDivider(color = WarmCream.copy(alpha = 0.1f))
+
+        // Left Time Column + Grid Content
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollStateY)
+        ) {
+            // Static Time Column
+            Column(
+                modifier = Modifier.width(50.dp)
+            ) {
+                for (hour in 0 until 24) {
+                    Box(
+                        modifier = Modifier.height(hourHeight).fillMaxWidth(),
+                        contentAlignment = Alignment.TopEnd
+                    ) {
+                        Text(
+                            text = String.format("%02d:00", hour),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = WarmCream.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(end = 8.dp, top = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            VerticalDivider(color = WarmCream.copy(alpha = 0.1f))
+
+            // Scrollable Grid Area
             Box(
                 modifier = Modifier
-                    .width(4.dp).height(52.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(sessionColor.copy(alpha = statusAlpha))
-            )
-
-            // Time column
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.width(56.dp)
+                    .fillMaxSize()
+                    .horizontalScroll(scrollStateX)
+                    .height(hourHeight * 24)
+                    .width(dayWidth * 7)
             ) {
-                Text(
-                    text  = formatTimestamp(session.startTime),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = WarmCream.copy(alpha = statusAlpha))
-                )
-                Text(
-                    text  = "↓",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = WarmCream.copy(alpha = 0.3f)
-                )
-                Text(
-                    text  = formatTimestamp(session.endTime),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = WarmCream.copy(alpha = statusAlpha * 0.6f)
-                )
+                // Draw horizontal grid lines
+                for (hour in 0..24) {
+                    HorizontalDivider(
+                        modifier = Modifier.offset(y = hourHeight * hour),
+                        color = WarmCream.copy(alpha = 0.05f)
+                    )
+                }
+                // Draw vertical grid lines
+                for (day in 0..7) {
+                    VerticalDivider(
+                        modifier = Modifier.offset(x = dayWidth * day),
+                        color = WarmCream.copy(alpha = 0.05f)
+                    )
+                }
+                
+                // Draw Overlaid Sessions
+                sessions.forEach { session ->
+                    val sessionDate = try { LocalDate.parse(session.date) } catch(e: Exception) { null }
+                    if (sessionDate != null) {
+                        val daysDiff = java.time.temporal.ChronoUnit.DAYS.between(startDate, sessionDate).toInt()
+                        if (daysDiff in 0..6) {
+                            val startDateTime = LocalDateTime.ofInstant(session.startTime.toDate().toInstant(), ZoneId.systemDefault())
+                            val endDateTime = LocalDateTime.ofInstant(session.endTime.toDate().toInstant(), ZoneId.systemDefault())
+                            
+                            val startOffsetHours = startDateTime.hour + startDateTime.minute / 60f
+                            val durationHours = java.time.Duration.between(startDateTime, endDateTime).toMinutes() / 60f
+                            
+                            TimetableSessionBlock(
+                                session = session,
+                                modifier = Modifier
+                                    .absoluteOffset(
+                                        x = dayWidth * daysDiff + 4.dp,
+                                        y = hourHeight * startOffsetHours + 2.dp
+                                    )
+                                    .size(
+                                        width = dayWidth - 8.dp,
+                                        height = (hourHeight * durationHours).coerceAtLeast(24.dp) - 4.dp
+                                    )
+                            )
+                        }
+                    }
+                }
             }
-
-            // Session info
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    text  = session.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color      = if (session.status == SessionStatus.COMPLETED) WarmCream.copy(alpha = 0.5f) else LightCream
-                    ),
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text  = session.category.name.replace("_", " "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = WarmCream.copy(alpha = 0.5f)
-                )
-            }
-
-            // Status chip
-            StatusChip(status = session.status, color = sessionColor)
         }
     }
 }
 
 @Composable
-private fun StatusChip(status: SessionStatus, color: Color) {
-    val (label, chipColor) = when (status) {
-        SessionStatus.COMPLETED    -> "Done" to IslamicGreen
-        SessionStatus.MISSED       -> "Missed" to CriticalRed
-        SessionStatus.IN_PROGRESS  -> "Now" to WarningAmber
-        SessionStatus.ADJUSTED     -> "Moved" to InfoBlue
-        SessionStatus.CANCELLED    -> "Cancelled" to WarmCream.copy(alpha = 0.4f)
-        else                       -> "Upcoming" to WarmCream.copy(alpha = 0.3f)
-    }
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(chipColor.copy(alpha = 0.15f))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+private fun TimetableSessionBlock(session: Session, modifier: Modifier) {
+    val sessionColor = Color(session.getSessionColor())
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = sessionColor.copy(alpha = 0.9f))
     ) {
-        Text(label, style = MaterialTheme.typography.labelSmall.copy(color = chipColor, fontWeight = FontWeight.Bold))
+        Column(modifier = Modifier.padding(6.dp)) {
+            Text(
+                session.title, 
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = DarkBrown),
+                maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                formatTimestamp(session.startTime) + " - " + formatTimestamp(session.endTime),
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, color = DarkBrown.copy(alpha = 0.8f))
+            )
+        }
     }
 }
 

@@ -89,4 +89,16 @@ class SessionRepository @Inject constructor(
             .await()
             .toObjects(Session::class.java)
     }
+
+    /** Get sessions that were completed in the past N days. */
+    suspend fun getCompletedSessionsSince(daysBack: Int): List<Session> {
+        val cutoff = LocalDate.now().minusDays(daysBack.toLong())
+            .format(DateTimeFormatter.ISO_LOCAL_DATE)
+        return sessionsRef
+            .whereEqualTo("status", SessionStatus.COMPLETED.name)
+            .whereGreaterThanOrEqualTo("date", cutoff)
+            .get()
+            .await()
+            .toObjects(Session::class.java)
+    }
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -49,13 +50,23 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick          = viewModel::showAddGoalSheet,
-                containerColor   = WarmCream,
-                contentColor     = DarkBrown,
-                shape            = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Filled.Add, "Add Goal")
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                FloatingActionButton(
+                    onClick          = viewModel::showAiSheet,
+                    containerColor   = InfoBlue,
+                    contentColor     = Color.White,
+                    shape            = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Filled.AutoAwesome, "AI Assistant")
+                }
+                FloatingActionButton(
+                    onClick          = viewModel::showAddGoalSheet,
+                    containerColor   = WarmCream,
+                    contentColor     = DarkBrown,
+                    shape            = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Filled.Add, "Add Goal")
+                }
             }
         }
     ) { padding ->
@@ -71,13 +82,16 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             contentPadding  = PaddingValues(bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Summary overview row
             item {
                 GoalSummaryRow(
                     active    = state.activeGoals.size,
                     completed = state.completedGoals.size,
                     avgProgress = state.activeGoals.map { it.progress }.average().toFloat().takeIf { !it.isNaN() } ?: 0f
                 )
+            }
+
+            state.disciplineInsight?.let { insight ->
+                item { DisciplineInsightCard(insight) }
             }
 
             // Active goals header
@@ -126,6 +140,24 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                     onEndDateChange   = viewModel::updateFormEndDate,
                     onSubmit   = viewModel::submitGoal,
                     onCancel   = viewModel::hideAddGoalSheet
+                )
+            }
+        }
+
+        // AI Assistant Sheet
+        if (state.showAiSheet) {
+            val aiReq by viewModel.aiRequest.collectAsStateWithLifecycle()
+            ModalBottomSheet(
+                onDismissRequest = viewModel::hideAiSheet,
+                containerColor   = MediumBrown,
+                tonalElevation   = 0.dp
+            ) {
+                AiAssistantForm(
+                    request = aiReq,
+                    onRequestChange = viewModel::updateAiRequest,
+                    isLoading = state.isAiLoading,
+                    onSubmit = viewModel::submitAiRequest,
+                    onCancel = viewModel::hideAiSheet
                 )
             }
         }
@@ -416,7 +448,85 @@ private fun EmptyGoals(text: String) {
 }
 
 @Composable
-private fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
+private fun DisciplineInsightCard(insight: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = InfoBlue.copy(alpha = 0.15f)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.AutoAwesome, contentDescription = "AI Insight", tint = InfoBlue)
+            Text(
+                text = insight,
+                style = MaterialTheme.typography.bodyMedium,
+                color = LightCream
+            )
+        }
+    }
+}
+
+@Composable
+private fun AiAssistantForm(
+    request: String,
+    onRequestChange: (String) -> Unit,
+    isLoading: Boolean,
+    onSubmit: () -> Unit,
+    onCancel: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(24.dp).navigationBarsPadding(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.AutoAwesome, null, tint = InfoBlue)
+            Text(
+                text  = "AI Assistant",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = LightCream)
+            )
+        }
+        Text(
+            text = "Tell me your goal and timeline, and I will perfectly adapt your schedule. Example: 'I need to study Math today from 5 PM to 7 PM'",
+            style = MaterialTheme.typography.bodySmall, color = WarmCream.copy(alpha = 0.7f)
+        )
+
+        OutlinedTextField(
+            value = request, onValueChange = onRequestChange,
+            modifier = Modifier.fillMaxWidth().height(120.dp),
+            colors = defaultTextFieldColors(),
+            shape  = RoundedCornerShape(12.dp),
+            placeholder = { Text("What do you want to achieve?", color = WarmCream.copy(alpha = 0.5f)) },
+            enabled = !isLoading
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(
+                onClick = onCancel, modifier = Modifier.weight(1f),
+                border  = ButtonDefaults.outlinedButtonBorder.copy(
+                    brush = androidx.compose.ui.graphics.SolidColor(WarmCream.copy(alpha = 0.4f))
+                ),
+                enabled = !isLoading
+            ) {
+                Text("Cancel", color = WarmCream)
+            }
+            Button(
+                onClick = onSubmit, modifier = Modifier.weight(1f),
+                colors  = ButtonDefaults.buttonColors(containerColor = InfoBlue, contentColor = Color.White),
+                shape   = RoundedCornerShape(12.dp),
+                enabled = request.isNotBlank() && !isLoading
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                } else {
+                    Text("Schedule it", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun defaultTextFieldColors() = OutlinedTextFieldDefaults.colors(
     focusedBorderColor   = WarmCream,
     unfocusedBorderColor = WarmCream.copy(alpha = 0.35f),
     focusedTextColor     = LightCream,

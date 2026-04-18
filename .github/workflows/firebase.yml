@@ -94,18 +94,13 @@ jobs:
           name: nad-master-debug-apk
           path: artifacts/
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NADMASTER }}
-
       - name: Upload APK to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          appId:                  ${{ secrets.FIREBASE_APP_ID }}
-          serviceCredentialsFile: ${{ env.GOOGLE_APPLICATION_CREDENTIALS }}
-          groups:                 nad-testers
-          file:                   artifacts/app-debug.apk
+          appId:                         ${{ secrets.FIREBASE_APP_ID }}
+          serviceCredentialsFileContent: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NADMASTER }}
+          groups:                        nad-testers
+          file:                          artifacts/app-debug.apk
           releaseNotes: |
             NAD MASTER — Build ${{ github.sha }}
             ${{ github.event.head_commit.message }}

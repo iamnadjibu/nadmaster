@@ -12,20 +12,25 @@ import nad.master.pa.data.model.Session
 import nad.master.pa.data.repository.SessionRepository
 import nad.master.pa.data.scheduler.SchedulingEngine
 import nad.master.pa.data.scheduler.WeekInfo
+import nad.master.pa.data.scheduler.RoutineSeeder
 import javax.inject.Inject
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 data class ScheduleUiState(
     val isLoading: Boolean = true,
     val sessions: List<Session> = emptyList(),
     val selectedWeekInfo: WeekInfo? = null,
     val adjustmentMessage: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val canSeedRoutine: Boolean = false
 )
 
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
     private val sessionRepository: SessionRepository,
-    private val schedulingEngine: SchedulingEngine
+    private val schedulingEngine: SchedulingEngine,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScheduleUiState())
@@ -39,7 +44,22 @@ class ScheduleViewModel @Inject constructor(
     val weekRange = (-4..4).toList()
 
     init {
+        checkSeedStatus()
         loadWeek(0)
+    }
+
+    private fun checkSeedStatus() {
+        val prefs = context.getSharedPreferences("NadMasterPrefs", Context.MODE_PRIVATE)
+        _uiState.value = _uiState.value.copy(canSeedRoutine = !prefs.getBoolean("has_seeded_routine", false))
+    }
+
+    fun seedRoutine() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            RoutineSeeder.seedRoutineIfFirstTime(context, sessionRepository)
+            checkSeedStatus()
+            loadWeek(_weekOffset.value)
+        }
     }
 
     fun selectWeek(offset: Int) {

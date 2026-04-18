@@ -68,6 +68,7 @@ fun HomeScreen(
             TopAppBar(
                 title = {
                     val hijriDate = remember { HijriDateHelper.todayHijriString() }
+                    val globalDate = remember { LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy")) }
                     val sawnInfo  = remember { HijriDateHelper.isSawnRecommendedToday() }
                     Column {
                         Text(
@@ -78,7 +79,7 @@ fun HomeScreen(
                             )
                         )
                         Text(
-                            text  = hijriDate,
+                            text  = "$hijriDate • $globalDate",
                             style = MaterialTheme.typography.bodySmall,
                             color = WarmCream.copy(alpha = 0.7f)
                         )

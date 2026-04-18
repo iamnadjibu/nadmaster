@@ -52,6 +52,17 @@ class SchedulingEngine @Inject constructor(
             return session.type == SessionType.BREAK ||
                    session.category == SessionCategory.SLACK
         }
+
+        /**
+         * Compute ISO week ID string for a given date (e.g., "2026-W14").
+         * Fixed to start on Saturday to match UI alignment.
+         */
+        fun getWeekId(date: LocalDate = LocalDate.now()): String {
+            val weekFields = java.time.temporal.WeekFields.of(java.time.DayOfWeek.SATURDAY, 1)
+            val week = date.get(weekFields.weekOfWeekBasedYear())
+            val year = date.get(weekFields.weekBasedYear())
+            return "$year-W${week.toString().padStart(2, '0')}"
+        }
     }
 
     /**
@@ -133,17 +144,11 @@ class SchedulingEngine @Inject constructor(
      */
     fun getWeekStart(weekOffset: Int = 0): LocalDate {
         val today = LocalDate.now()
-        val monday = today.minusDays(today.dayOfWeek.value.toLong() - 1)
-        return monday.plusWeeks(weekOffset.toLong())
-    }
-
-    /**
-     * Compute ISO week ID string for a given date (e.g., "2026-W14").
-     */
-    fun getWeekId(date: LocalDate = LocalDate.now()): String {
-        val week = date.get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear())
-        val year = date.get(java.time.temporal.WeekFields.ISO.weekBasedYear())
-        return "$year-W${week.toString().padStart(2, '0')}"
+        // Saturday is start of the week. Mon=1..Sun=7
+        // daysSinceSaturday: Sat=0, Sun=1, Mon=2, Tue=3, Wed=4, Thu=5, Fri=6
+        val daysSinceSaturday = (today.dayOfWeek.value + 1) % 7
+        val saturday = today.minusDays(daysSinceSaturday.toLong())
+        return saturday.plusWeeks(weekOffset.toLong())
     }
 
     /**
