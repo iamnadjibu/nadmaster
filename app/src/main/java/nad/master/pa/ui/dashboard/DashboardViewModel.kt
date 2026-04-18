@@ -67,10 +67,17 @@ class DashboardViewModel @Inject constructor(
             try {
                 val missed = sessionRepository.getMissedSessionsSince(7)
                 val completed = sessionRepository.getCompletedSessionsSince(7)
-                val insight = aiAssistantEngine.analyzeDiscipline(completed, missed)
+                val unfinished = sessionRepository.getUnfinishedSessionsSince(7)
+                val insight = aiAssistantEngine.analyzeDiscipline(completed, missed, unfinished)
                 _uiState.value = _uiState.value.copy(disciplineInsight = insight)
             } catch (e: Exception) {
-                // Ignore silent PA failures
+                Log.e("DashboardVM", "loadDisciplineInsight: FAILED", e)
+                val userError = when {
+                    e.message?.contains("API_KEY_INVALID", true) == true -> "AI API Key is invalid."
+                    e.message?.contains("quota", true) == true -> "AI quota exceeded."
+                    else -> "AI Discipline Insight failed: ${e.localizedMessage ?: "Unknown error"}"
+                }
+                _uiState.value = _uiState.value.copy(disciplineInsight = userError)
             }
         }
     }

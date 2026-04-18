@@ -84,6 +84,8 @@ class AiAssistantEngine @Inject constructor() {
             2. NO OVERLAPS: Check EXISTING SCHEDULE and never overlap.
             3. CATEGORIES: Choose from [PERSONAL_GOALS, STUDY, QURAN_MEMORIZATION, TRAINING, CLASS, BREAK, SALAH].
             4. DURATION: If not specified, use reasonable blocks (1-2 hours).
+            5. MULTI-WEEK PLANNING: If the user asks for a 'month', '4 weeks', or 'routine', generate sessions for up to 30 days ahead from ${todayStr}.
+            6. QURAN ROUTINE: Follow the "2+1" rule: 2 days of "Memorization (New Page)" followed by 1 day of "Revision (Repeat 2 Pages)".
             
             FORMAT EXAMPLE:
             [
@@ -161,9 +163,10 @@ class AiAssistantEngine @Inject constructor() {
     /**
      * Analyzes recent behavior to provide discipline insights.
      */
-    suspend fun analyzeDiscipline(completed: List<Session>, missed: List<Session>): String = withContext(Dispatchers.IO) {
+    suspend fun analyzeDiscipline(completed: List<Session>, missed: List<Session>, unfinished: List<Session>): String = withContext(Dispatchers.IO) {
         val completedSummary = completed.groupBy { it.category }.map { "${it.key}: ${it.value.size}" }.joinToString(", ")
         val missedSummary = missed.groupBy { it.category }.map { "${it.key}: ${it.value.size}" }.joinToString(", ")
+        val unfinishedSummary = unfinished.groupBy { it.category }.map { "${it.key}: ${it.value.size}" }.joinToString(", ")
 
         val prompt = """
             You are a strict but encouraging Personal Assistant for the NAD MASTER app.
@@ -172,19 +175,16 @@ class AiAssistantEngine @Inject constructor() {
             Recent Behavior Data:
             - Completed Sessions: ${if (completedSummary.isBlank()) "None" else completedSummary}
             - Missed Sessions: ${if (missedSummary.isBlank()) "None" else missedSummary}
+            - Partially Completed (Unfinished): ${if (unfinishedSummary.isBlank()) "None" else unfinishedSummary}
             
+            Analyze the user's progress. "Unfinished" is better than "Missed" but needs improvement.
             Keep your response concise (3-4 sentences total).
-            Identify any trending negative behavior (if missed sessions exist) and suggest a discipline correction. 
+            Identify any trending negative behavior and suggest a discipline correction. 
             If behavior is good, acknowledge the dedication.
         """.trimIndent()
 
-        try {
-            val response = disciplineModel.generateContent(prompt)
-            response.text?.trim() ?: "Keep pushing forward!"
-        } catch (e: Exception) {
-            e.printStackTrace()
-            "Unable to generate discipline insights right now."
-        }
+        val response = disciplineModel.generateContent(prompt)
+        response.text?.trim() ?: "Keep pushing forward!"
     }
 
     private fun formatTimestamp(ts: com.google.firebase.Timestamp): String {

@@ -57,6 +57,7 @@ enum class SessionStatus {
     IN_PROGRESS,
     COMPLETED,
     MISSED,
+    UNFINISHED,
     ADJUSTED,   // Was rescheduled by the engine
     CANCELLED
 }

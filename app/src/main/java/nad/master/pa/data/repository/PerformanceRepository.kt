@@ -49,11 +49,11 @@ class PerformanceRepository @Inject constructor(
 
     /** Compute today's performance from session data and save it. */
     suspend fun computeAndSaveDailyPerformance(
-        scheduled: Int, completed: Int, missed: Int, prayersCompleted: Int,
-        tahajjud: Boolean, quranVerses: Int
+        scheduled: Int, completed: Int, missed: Int, unfinished: Int,
+        prayers: Int, tahajjud: Boolean, quranVerses: Int
     ) {
         val date = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val score = computeDisciplineScore(scheduled, completed, missed, prayersCompleted, tahajjud)
+        val score = computeDisciplineScore(scheduled, completed, missed, unfinished, prayers, tahajjud)
         val perf = DailyPerformance(
             date = date,
             sessionsScheduled = scheduled,
@@ -68,11 +68,13 @@ class PerformanceRepository @Inject constructor(
     }
 
     private fun computeDisciplineScore(
-        scheduled: Int, completed: Int, missed: Int,
+        scheduled: Int, completed: Int, missed: Int, unfinished: Int,
         prayers: Int, tahajjud: Boolean
     ): Float {
         if (scheduled == 0) return 0f
-        val sessionScore = (completed.toFloat() / scheduled.coerceAtLeast(1)) * 60f  // 60% weight
+        // Unfinished counts as 0.5 of a completion
+        val effectiveCompleted = completed + (unfinished * 0.5f)
+        val sessionScore = (effectiveCompleted / scheduled.coerceAtLeast(1)) * 60f  // 60% weight
         val prayerScore  = (prayers.toFloat() / 5f) * 30f                             // 30% weight
         val tahajjudBonus = if (tahajjud) 10f else 0f                                 // 10% bonus
         return (sessionScore + prayerScore + tahajjudBonus).coerceIn(0f, 100f)

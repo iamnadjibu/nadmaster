@@ -30,10 +30,9 @@ object RoutineSeeder {
         // Determine this week's Saturday start
         val today = LocalDate.now()
         val daysSinceSat = (today.dayOfWeek.value + 1) % 7
-        val weekStart = today.minusDays(daysSinceSat.toLong())
-        val weekId = SchedulingEngine.getWeekId(weekStart)
+        val weekStartSeed = today.minusDays(daysSinceSat.toLong())
 
-        Log.d(TAG, "Seeding for weekStart=$weekStart weekId=$weekId")
+        Log.d(TAG, "Seeding for 4 weeks starting from weekStart=$weekStartSeed")
 
         val sessionsToSeed = mutableListOf<Session>()
 
@@ -62,73 +61,84 @@ object RoutineSeeder {
             )
         }
 
-        // --- Saturday (Offset 0) & Sunday (Offset 1) — Weekend Routine ---
-        for (i in 0..1) {
-            val d = weekStart.plusDays(i.toLong())
-            addSession(d, "04:30", "05:00", "Fajr", SessionType.RELIGIOUS, SessionCategory.SALAH, "Wake up, Wudu, Fajr")
-            addSession(d, "05:00", "06:30", "Hygiene / Chores", SessionType.FLEXIBLE, SessionCategory.PERSONAL_GOALS, "Cleaning & prep")
-            addSession(d, "06:30", "07:00", "Prep", SessionType.FLEXIBLE, SessionCategory.PERSONAL_GOALS, "Breakfast")
-            addSession(d, "07:00", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Work/Kigali")
-            addSession(d, "09:00", "11:30", "FYP II", SessionType.FIXED, SessionCategory.STUDY, "Deep work on Final Year Project")
-            addSession(d, "11:30", "13:00", "Dhuhr & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Prayer (~12:00) and mid-day meal")
-            addSession(d, "13:00", "17:00", "JOB: KSP Rwanda", SessionType.FIXED, SessionCategory.TRAINING, "Weekend Shift. Asr break ~16:00")
-            addSession(d, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
-            addSession(d, "18:00", "20:00", "Quran & Prayers", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, "Maghrib, Quran Memorization, and Isha")
-            addSession(d, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
-            addSession(d, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
+        // Loop through 4 weeks
+        for (weekOffset in 0 until 4) {
+            val weekStart = weekStartSeed.plusWeeks(weekOffset.toLong())
+            
+            for (dayOffset in 0..6) {
+                val d = weekStart.plusDays(dayOffset.toLong())
+                val globalDayIndex = weekOffset * 7 + dayOffset
+                
+                // Determine Quran Type (2 days New, 1 day Repeat)
+                val quranType = if (globalDayIndex % 3 == 2) "Revision (Repeat)" else "Memorization (New)"
+                val quranDesc = if (globalDayIndex % 3 == 2) "Repeat/Revise the 2 pages memorized in previous 2 days." else "Memorize 1 new page."
+
+                // Saturday & Sunday — Weekend Routine
+                if (dayOffset == 0 || dayOffset == 1) {
+                    addSession(d, "04:30", "05:00", "Fajr", SessionType.RELIGIOUS, SessionCategory.SALAH, "Wake up, Wudu, Fajr")
+                    addSession(d, "05:00", "06:30", "Hygiene / Chores", SessionType.FLEXIBLE, SessionCategory.PERSONAL_GOALS, "Cleaning & prep")
+                    addSession(d, "06:30", "07:00", "Prep", SessionType.FLEXIBLE, SessionCategory.PERSONAL_GOALS, "Breakfast")
+                    addSession(d, "07:00", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Work/Kigali")
+                    addSession(d, "09:00", "11:30", "FYP II", SessionType.FIXED, SessionCategory.STUDY, "Deep work on Final Year Project")
+                    addSession(d, "11:30", "13:00", "Dhuhr & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Prayer (~12:00) and mid-day meal")
+                    addSession(d, "13:00", "17:00", "JOB: KSP Rwanda", SessionType.FIXED, SessionCategory.TRAINING, "Weekend Shift. Asr break ~16:00")
+                    addSession(d, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
+                    addSession(d, "18:00", "20:00", "Quran: $quranType", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, quranDesc)
+                    addSession(d, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
+                    addSession(d, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
+                } 
+                // Monday (2) & Tuesday (3) — KSP Job & Deep Study
+                else if (dayOffset == 2 || dayOffset == 3) {
+                    addSession(d, "04:30", "06:30", "Fajr & FYP II", SessionType.FIXED, SessionCategory.STUDY, "Fajr (~5:00). Deep work on FYP")
+                    addSession(d, "06:30", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Kigali")
+                    addSession(d, "09:00", "10:30", "Self-Study", SessionType.FLEXIBLE, SessionCategory.STUDY, "University Free Slot")
+                    addSession(d, "10:30", "12:30", "JOB: KSP Rwanda", SessionType.FIXED, SessionCategory.TRAINING, "Work shift")
+                    addSession(d, "12:30", "14:00", "Dhuhr & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Prayer and mid-day meal")
+                    addSession(d, "14:00", "17:00", "Study & Asr", SessionType.FIXED, SessionCategory.STUDY, "Afternoon FYP Block. Deep study")
+                    addSession(d, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
+                    addSession(d, "18:00", "20:00", "Quran: $quranType", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, quranDesc)
+                    addSession(d, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
+                    addSession(d, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
+                }
+                // Wednesday (4) — KSP Job & Occ. Safety
+                else if (dayOffset == 4) {
+                    addSession(d, "04:30", "06:30", "Fajr & FYP II", SessionType.FIXED, SessionCategory.STUDY, "Fajr (~5:00). Deep work on FYP")
+                    addSession(d, "06:30", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Kigali")
+                    addSession(d, "09:00", "10:30", "Self-Study", SessionType.FLEXIBLE, SessionCategory.STUDY, "University Free Slot")
+                    addSession(d, "10:30", "12:30", "JOB: KSP Rwanda", SessionType.FIXED, SessionCategory.TRAINING, "Work shift")
+                    addSession(d, "12:30", "14:00", "Dhuhr & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Prayer and mid-day meal")
+                    addSession(d, "14:00", "17:00", "Class & Asr", SessionType.FIXED, SessionCategory.CLASS, "Occ. Safety (CAMP KIGALI_0R03). Asr break ~16:00")
+                    addSession(d, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
+                    addSession(d, "18:00", "20:00", "Quran: $quranType", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, quranDesc)
+                    addSession(d, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
+                    addSession(d, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
+                }
+                // Thursday (5) — Mandatory Classes
+                else if (dayOffset == 5) {
+                    addSession(d, "04:30", "06:30", "Fajr & FYP II", SessionType.FIXED, SessionCategory.STUDY, "Fajr (~5:00). Deep work on FYP")
+                    addSession(d, "06:30", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Campus")
+                    addSession(d, "09:00", "12:00", "Class (Morning)", SessionType.FIXED, SessionCategory.CLASS, "Non-destructive testing (MUHABURA_1R09)")
+                    addSession(d, "12:00", "14:00", "Dhuhr & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Prayer and mid-day meal")
+                    addSession(d, "14:00", "17:00", "Class & Asr", SessionType.FIXED, SessionCategory.CLASS, "Adv. machining (MUHABURA_2R10). Asr break ~16:00")
+                    addSession(d, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
+                    addSession(d, "18:00", "20:00", "Quran: $quranType", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, quranDesc)
+                    addSession(d, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
+                    addSession(d, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
+                }
+                // Friday (6) — Composite Materials & Jumu'ah
+                else if (dayOffset == 6) {
+                    addSession(d, "04:30", "06:30", "Fajr & FYP II", SessionType.FIXED, SessionCategory.STUDY, "Fajr (~5:00). Deep work on FYP")
+                    addSession(d, "06:30", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Campus")
+                    addSession(d, "09:00", "12:00", "Class (Morning)", SessionType.FIXED, SessionCategory.CLASS, "Composite eng. materials (IKAZE_1R01)")
+                    addSession(d, "12:00", "14:00", "Jumu'ah & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Friday Prayer Congregation and Lunch")
+                    addSession(d, "14:00", "17:00", "Study & Asr", SessionType.FLEXIBLE, SessionCategory.STUDY, "Afternoon FYP Block. Complete assignments")
+                    addSession(d, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
+                    addSession(d, "18:00", "20:00", "Quran: $quranType", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, quranDesc)
+                    addSession(d, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
+                    addSession(d, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
+                }
+            }
         }
-
-        // --- Monday (2) & Tuesday (3) — KSP Job & Deep Study ---
-        for (i in 2..3) {
-            val d = weekStart.plusDays(i.toLong())
-            addSession(d, "04:30", "06:30", "Fajr & FYP II", SessionType.FIXED, SessionCategory.STUDY, "Fajr (~5:00). Deep work on FYP")
-            addSession(d, "06:30", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Kigali")
-            addSession(d, "09:00", "10:30", "Self-Study", SessionType.FLEXIBLE, SessionCategory.STUDY, "University Free Slot")
-            addSession(d, "10:30", "12:30", "JOB: KSP Rwanda", SessionType.FIXED, SessionCategory.TRAINING, "Work shift")
-            addSession(d, "12:30", "14:00", "Dhuhr & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Prayer and mid-day meal")
-            addSession(d, "14:00", "17:00", "Study & Asr", SessionType.FIXED, SessionCategory.STUDY, "Afternoon FYP Block. Deep study")
-            addSession(d, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
-            addSession(d, "18:00", "20:00", "Quran & Prayers", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, "Maghrib, Quran Memorization, and Isha")
-            addSession(d, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
-            addSession(d, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
-        }
-
-        // --- Wednesday (4) — KSP Job & Occ. Safety ---
-        val wed = weekStart.plusDays(4)
-        addSession(wed, "04:30", "06:30", "Fajr & FYP II", SessionType.FIXED, SessionCategory.STUDY, "Fajr (~5:00). Deep work on FYP")
-        addSession(wed, "06:30", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Kigali")
-        addSession(wed, "09:00", "10:30", "Self-Study", SessionType.FLEXIBLE, SessionCategory.STUDY, "University Free Slot")
-        addSession(wed, "10:30", "12:30", "JOB: KSP Rwanda", SessionType.FIXED, SessionCategory.TRAINING, "Work shift")
-        addSession(wed, "12:30", "14:00", "Dhuhr & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Prayer and mid-day meal")
-        addSession(wed, "14:00", "17:00", "Class & Asr", SessionType.FIXED, SessionCategory.CLASS, "Occ. Safety (CAMP KIGALI_0R03). Asr break ~16:00")
-        addSession(wed, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
-        addSession(wed, "18:00", "20:00", "Quran & Prayers", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, "Maghrib, Quran Memorization, and Isha")
-        addSession(wed, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
-        addSession(wed, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
-
-        // --- Thursday (5) — Mandatory Classes ---
-        val thu = weekStart.plusDays(5)
-        addSession(thu, "04:30", "06:30", "Fajr & FYP II", SessionType.FIXED, SessionCategory.STUDY, "Fajr (~5:00). Deep work on FYP")
-        addSession(thu, "06:30", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Campus")
-        addSession(thu, "09:00", "12:00", "Class (Morning)", SessionType.FIXED, SessionCategory.CLASS, "Non-destructive testing (MUHABURA_1R09)")
-        addSession(thu, "12:00", "14:00", "Dhuhr & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Prayer and mid-day meal")
-        addSession(thu, "14:00", "17:00", "Class & Asr", SessionType.FIXED, SessionCategory.CLASS, "Adv. machining (MUHABURA_2R10). Asr break ~16:00")
-        addSession(thu, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
-        addSession(thu, "18:00", "20:00", "Quran & Prayers", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, "Maghrib, Quran Memorization, and Isha")
-        addSession(thu, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
-        addSession(thu, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
-
-        // --- Friday (6) — Composite Materials & Jumu'ah ---
-        val fri = weekStart.plusDays(6)
-        addSession(fri, "04:30", "06:30", "Fajr & FYP II", SessionType.FIXED, SessionCategory.STUDY, "Fajr (~5:00). Deep work on FYP")
-        addSession(fri, "06:30", "09:00", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Home to Campus")
-        addSession(fri, "09:00", "12:00", "Class (Morning)", SessionType.FIXED, SessionCategory.CLASS, "Composite eng. materials (IKAZE_1R01)")
-        addSession(fri, "12:00", "14:00", "Jumu'ah & Lunch", SessionType.RELIGIOUS, SessionCategory.SALAH, "Friday Prayer Congregation and Lunch")
-        addSession(fri, "14:00", "17:00", "Study & Asr", SessionType.FLEXIBLE, SessionCategory.STUDY, "Afternoon FYP Block. Complete assignments")
-        addSession(fri, "17:00", "18:00", "Break", SessionType.BREAK, SessionCategory.BREAK, "Relax and unwind")
-        addSession(fri, "18:00", "20:00", "Quran & Prayers", SessionType.RELIGIOUS, SessionCategory.QURAN_MEMORIZATION, "Maghrib, Quran Memorization, and Isha")
-        addSession(fri, "20:00", "21:30", "Commute", SessionType.FIXED, SessionCategory.OTHER, "Transport Home")
-        addSession(fri, "21:30", "21:45", "Wind Down", SessionType.BREAK, SessionCategory.BREAK, "Prepare for sleep")
 
         Log.d(TAG, "Prepared ${sessionsToSeed.size} sessions to seed")
 
@@ -140,7 +150,7 @@ object RoutineSeeder {
             if (count % 10 == 0) Log.d(TAG, "Seeded $count/${sessionsToSeed.size} sessions…")
         }
 
-        Log.d(TAG, "All $count sessions seeded successfully!")
+        Log.d(TAG, "All $count sessions seeded successfully for 4 weeks!")
         prefs.edit().putBoolean("has_seeded_routine", true).apply()
     }
 }

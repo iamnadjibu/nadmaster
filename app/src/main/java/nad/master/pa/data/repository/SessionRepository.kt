@@ -149,4 +149,15 @@ class SessionRepository @Inject constructor(
             .await()
             .toObjects(Session::class.java)
     }
+    /** Get sessions that were unfinished in the past N days. */
+    suspend fun getUnfinishedSessionsSince(daysBack: Int): List<Session> {
+        val cutoff = LocalDate.now().minusDays(daysBack.toLong())
+            .format(DateTimeFormatter.ISO_LOCAL_DATE)
+        return sessionsRef
+            .whereEqualTo("status", SessionStatus.UNFINISHED.name)
+            .whereGreaterThanOrEqualTo("date", cutoff)
+            .get()
+            .await()
+            .toObjects(Session::class.java)
+    }
 }

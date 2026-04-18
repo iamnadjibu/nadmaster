@@ -70,12 +70,34 @@ class HomeViewModel @Inject constructor(
             ) { sessions, goals, quranProgress, recentPerf ->
 
                 val now = LocalDateTime.now()
-                val currentSession = sessions.firstOrNull { session ->
-                    session.status == SessionStatus.IN_PROGRESS
+                val currentSession = sessions.find { session ->
+                    try {
+                        val sessionDate = LocalDate.parse(session.date)
+                        val start = LocalDateTime.of(sessionDate, java.time.LocalTime.of(
+                            (session.startTime.toDate().hours), 
+                            (session.startTime.toDate().minutes)
+                        ))
+                        val end = LocalDateTime.of(sessionDate, java.time.LocalTime.of(
+                            (session.endTime.toDate().hours), 
+                            (session.endTime.toDate().minutes)
+                        ))
+                        now.isAfter(start) && now.isBefore(end)
+                    } catch (e: Exception) { false }
                 }
-                val nextSession = sessions.firstOrNull { session ->
-                    session.status == SessionStatus.UPCOMING
-                }
+                
+                val nextSession = sessions
+                    .filter { session ->
+                        try {
+                            val sessionDate = LocalDate.parse(session.date)
+                            val start = LocalDateTime.of(sessionDate, java.time.LocalTime.of(
+                                (session.startTime.toDate().hours), 
+                                (session.startTime.toDate().minutes)
+                            ))
+                            start.isAfter(now)
+                        } catch (e: Exception) { false }
+                    }
+                    .sortedBy { it.startTime }
+                    .firstOrNull()
 
                 val latestScore = recentPerf.lastOrNull()?.disciplineScore ?: 0f
                 val weeklyRate  = if (recentPerf.isNotEmpty()) {
@@ -112,6 +134,12 @@ class HomeViewModel @Inject constructor(
     fun markSessionMissed(sessionId: String) {
         viewModelScope.launch {
             sessionRepository.updateSessionStatus(sessionId, SessionStatus.MISSED)
+        }
+    }
+
+    fun markSessionUnfinished(sessionId: String) {
+        viewModelScope.launch {
+            sessionRepository.updateSessionStatus(sessionId, SessionStatus.UNFINISHED)
         }
     }
 

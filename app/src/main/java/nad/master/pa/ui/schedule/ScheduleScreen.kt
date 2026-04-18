@@ -48,6 +48,7 @@ fun ScheduleScreen(viewModel: ScheduleViewModel = hiltViewModel()) {
     val weekOffset by viewModel.weekOffset.collectAsStateWithLifecycle()
     
     var sessionToEdit by remember { mutableStateOf<Session?>(null) }
+    var showEditForm  by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = DarkBrown,
@@ -191,14 +192,26 @@ fun ScheduleScreen(viewModel: ScheduleViewModel = hiltViewModel()) {
             containerColor = MediumBrown,
             tonalElevation = 0.dp
         ) {
-            SessionEditSheet(
-                session = sessionToEdit!!,
-                onDelete = {
-                    viewModel.deleteSession(it.id)
-                    sessionToEdit = null
-                },
-                onDismiss = { sessionToEdit = null }
-            )
+            if (showEditForm) {
+                EditSessionSheet(
+                    session = sessionToEdit!!,
+                    onSave = { updated ->
+                        viewModel.updateSession(updated)
+                        showEditForm = false
+                        sessionToEdit = null
+                    },
+                    onCancel = { showEditForm = false }
+                )
+            } else {
+                SessionEditSheet(
+                    session = sessionToEdit!!,
+                    onDelete = {
+                        viewModel.deleteSession(it.id)
+                        sessionToEdit = null
+                    },
+                    onEdit = { showEditForm = true }
+                )
+            }
         }
     }
 }
@@ -463,16 +476,25 @@ private fun TimetableSessionBlock(
 private fun SessionEditSheet(
     session: Session,
     onDelete: (Session) -> Unit,
-    onDismiss: () -> Unit
+    onEdit: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(24.dp).navigationBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = "Edit Session",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = LightCream)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Session Details",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = LightCream)
+            )
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Filled.Delete, "Delete", tint = CriticalRed)
+            }
+        }
         
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -487,24 +509,75 @@ private fun SessionEditSheet(
             }
         }
 
+        Button(
+            onClick = onEdit,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = WarmCream, contentColor = DarkBrown),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(Icons.Filled.Edit, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Edit Session")
+        }
+    }
+}
+
+@Composable
+private fun EditSessionSheet(
+    session: Session,
+    onSave: (Session) -> Unit,
+    onCancel: () -> Unit
+) {
+    var title by remember { mutableStateOf(session.title) }
+    var desc  by remember { mutableStateOf(session.description) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(24.dp).navigationBarsPadding(),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Edit Session",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = LightCream)
+        )
+
+        OutlinedTextField(
+            value = title,
+            onValueChange = { title = it },
+            label = { Text("Title", color = WarmCream.copy(0.7f)) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = LightCream,
+                unfocusedTextColor = WarmCream,
+                unfocusedContainerColor = Transparent,
+                focusedContainerColor = Transparent
+            )
+        )
+
+        OutlinedTextField(
+            value = desc,
+            onValueChange = { desc = it },
+            label = { Text("Description", color = WarmCream.copy(0.7f)) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 3,
+            colors = TextFieldDefaults.colors(
+                focusedTextColor = LightCream,
+                unfocusedTextColor = WarmCream,
+                unfocusedContainerColor = Transparent,
+                focusedContainerColor = Transparent
+            )
+        )
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(
-                onClick = { onDelete(session) },
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = CriticalRed, contentColor = Color.White),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Icon(Icons.Filled.Delete, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Delete")
+            TextButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
+                Text("Cancel", color = WarmCream)
             }
             Button(
-                onClick = onDismiss,
+                onClick = { onSave(session.copy(title = title, description = desc)) },
                 modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(containerColor = WarmCream, contentColor = DarkBrown),
+                colors = ButtonDefaults.buttonColors(containerColor = IslamicGreen),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Close")
+                Text("Save Changes")
             }
         }
     }

@@ -146,7 +146,8 @@ fun HomeScreen(
                         currentSession = state.currentSession,
                         nextSession    = state.nextSession,
                         onMarkCompleted = viewModel::markSessionCompleted,
-                        onMarkMissed    = viewModel::markSessionMissed
+                        onMarkMissed    = viewModel::markSessionMissed,
+                        onMarkUnfinished = viewModel::markSessionUnfinished
                     )
                 }
             }
@@ -337,7 +338,8 @@ private fun CurrentNextSessionCard(
     currentSession: Session?,
     nextSession: Session?,
     onMarkCompleted: (String) -> Unit,
-    onMarkMissed: (String) -> Unit
+    onMarkMissed: (String) -> Unit,
+    onMarkUnfinished: (String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -359,7 +361,8 @@ private fun CurrentNextSessionCard(
                     color  = IslamicGreen,
                     session = currentSession,
                     onComplete = { onMarkCompleted(currentSession.id) },
-                    onMissed   = { onMarkMissed(currentSession.id) }
+                    onMissed   = { onMarkMissed(currentSession.id) },
+                    onUnfinished = { onMarkUnfinished(currentSession.id) }
                 )
             } else {
                 Row(
@@ -389,7 +392,8 @@ private fun SessionStatusChip(
     color: Color,
     session: Session,
     onComplete: (() -> Unit)? = null,
-    onMissed: (() -> Unit)? = null
+    onMissed: (() -> Unit)? = null,
+    onUnfinished: (() -> Unit)? = null
 ) {
     val sessionColor = Color(session.getSessionColor())
     Row(
@@ -435,6 +439,9 @@ private fun SessionStatusChip(
                 }
                 IconButton(onClick = { onMissed?.invoke() }, modifier = Modifier.size(32.dp)) {
                     Icon(Icons.Filled.Circle, "Missed", tint = CriticalRed, modifier = Modifier.size(22.dp))
+                }
+                IconButton(onClick = { onUnfinished?.invoke() }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Filled.QuestionMark, "Unfinished", tint = WarningAmber, modifier = Modifier.size(22.dp))
                 }
             }
         }
