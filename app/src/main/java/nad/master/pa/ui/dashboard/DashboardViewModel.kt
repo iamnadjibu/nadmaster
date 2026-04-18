@@ -1,5 +1,6 @@
 package nad.master.pa.ui.dashboard
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -105,12 +106,16 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isAiLoading = true)
             try {
+                Log.d("DashboardVM", "submitAiRequest: Sending to Gemini: $req")
                 val generatedSessions = aiAssistantEngine.scheduleGoal(req)
+                Log.d("DashboardVM", "submitAiRequest: Gemini returned ${generatedSessions.size} sessions")
                 generatedSessions.forEach { session ->
+                    Log.d("DashboardVM", "submitAiRequest: Adding session '${session.title}' weekId=${session.weekId} date=${session.date}")
                     sessionRepository.addSession(session)
                 }
                 hideAiSheet()
             } catch (e: Exception) {
+                Log.e("DashboardVM", "submitAiRequest: FAILED", e)
                 _uiState.value = _uiState.value.copy(isAiLoading = false, error = e.message)
             }
         }
@@ -127,17 +132,24 @@ class DashboardViewModel @Inject constructor(
         val form = _goalForm.value
         if (form.title.isBlank()) return
         viewModelScope.launch {
-            goalRepository.addGoal(
-                Goal(
-                    title       = form.title,
-                    description = form.description,
-                    category    = form.category,
-                    priority    = form.priority,
-                    startDate   = form.startDate,
-                    endDate     = form.endDate
+            try {
+                Log.d("DashboardVM", "submitGoal: Adding goal '${form.title}'")
+                goalRepository.addGoal(
+                    Goal(
+                        title       = form.title,
+                        description = form.description,
+                        category    = form.category,
+                        priority    = form.priority,
+                        startDate   = form.startDate,
+                        endDate     = form.endDate
+                    )
                 )
-            )
-            hideAddGoalSheet()
+                Log.d("DashboardVM", "submitGoal: Goal added successfully")
+                hideAddGoalSheet()
+            } catch (e: Exception) {
+                Log.e("DashboardVM", "submitGoal: FAILED", e)
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
         }
     }
 

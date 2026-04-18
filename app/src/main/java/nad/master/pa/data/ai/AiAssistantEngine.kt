@@ -7,6 +7,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.util.Log
 import nad.master.pa.BuildConfig
 import nad.master.pa.data.model.Session
 import nad.master.pa.data.model.SessionCategory
@@ -23,6 +24,10 @@ import javax.inject.Singleton
 @Singleton
 class AiAssistantEngine @Inject constructor() {
     
+    companion object {
+        private const val TAG = "AiAssistant"
+    }
+
     private val gson = Gson()
 
     private val generativeModel by lazy {
@@ -80,13 +85,17 @@ class AiAssistantEngine @Inject constructor() {
         """.trimIndent()
 
         try {
+            Log.d(TAG, "scheduleGoal: API key present = ${BuildConfig.GEMINI_API_KEY.isNotBlank()}")
+            Log.d(TAG, "scheduleGoal: Sending prompt to Gemini…")
             val response = generativeModel.generateContent(prompt)
-            val jsonText = response.text?.trim()?.removePrefix("```json")?.removeSuffix("```")?.trim() 
-                ?: return@withContext emptyList()
+            val jsonText = response.text?.trim()?.removePrefix("```json")?.removeSuffix("```")?.trim()
+            Log.d(TAG, "scheduleGoal: Gemini raw response = $jsonText")
+            if (jsonText.isNullOrBlank()) return@withContext emptyList()
             
             // Define an intermediate DTO matching the prompt layout
             val listType = object : TypeToken<List<AiSessionDto>>() {}.type
             val dtos: List<AiSessionDto> = gson.fromJson(jsonText, listType)
+            Log.d(TAG, "scheduleGoal: Parsed ${dtos.size} DTOs")
 
             // Convert to actual models
             dtos.map { dto ->
@@ -110,8 +119,8 @@ class AiAssistantEngine @Inject constructor() {
                 )
             }
         } catch (e: Exception) {
-            e.printStackTrace()
-            emptyList()
+            Log.e(TAG, "scheduleGoal: FAILED", e)
+            throw e // Let caller handle the error visibly
         }
     }
 

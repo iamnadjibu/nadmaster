@@ -122,6 +122,36 @@ fun ScheduleScreen(viewModel: ScheduleViewModel = hiltViewModel()) {
                 )
             }
 
+            // ── Error Banner ─────────────────────────────────────────────────
+            AnimatedVisibility(
+                visible = state.error != null,
+                enter   = fadeIn(), exit = fadeOut()
+            ) {
+                state.error?.let { errorMsg ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = CardDefaults.cardColors(containerColor = CriticalRed.copy(alpha = 0.15f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text     = errorMsg,
+                                style    = MaterialTheme.typography.bodySmall,
+                                color    = CriticalRed,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = viewModel::dismissError, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Filled.Close, null, tint = CriticalRed, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
             // ── Session Schedule ─────────────────────────────────────────────
             if (state.isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
