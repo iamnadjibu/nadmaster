@@ -55,19 +55,35 @@ class AiAssistantEngine @Inject constructor() {
     /**
      * Parses a natural language request into a list of structured Session objects.
      */
-    suspend fun scheduleGoal(requestText: String, contextDate: LocalDate = LocalDate.now()): List<Session> = withContext(Dispatchers.IO) {
+    suspend fun scheduleGoal(
+        requestText: String, 
+        existingSessions: List<Session> = emptyList(),
+        contextDate: LocalDate = LocalDate.now()
+    ): List<Session> = withContext(Dispatchers.IO) {
         val todayStr = contextDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
         
+        val existingBrief = if (existingSessions.isEmpty()) "None" else 
+            existingSessions.joinToString("\n") { 
+                "- ${it.title} on ${it.date} from ${formatTimestamp(it.startTime)} to ${formatTimestamp(it.endTime)}" 
+            }
+
         val prompt = """
             You are a Personal Assistant AI for the NAD MASTER app.
             Today's Date: $todayStr (Format yyyy-MM-dd)
             
-            The user wants to schedule a new goal/activity: "$requestText"
+            USER ACTIVE HOURS: 04:00 to 22:00. Never schedule anything outside this window.
+            
+            EXISTING SCHEDULE:
+            $existingBrief
+            
+            THE USER'S NEW REQUEST: "$requestText"
             
             Analyze the request and generate an optimal schedule as a JSON array of Session objects.
-            Use the following rules:
-            - If time is implied but not explicitly stated, choose a reasonable time (e.g., studying usually 1-2 hours).
-            - Output MUST be an array of JSON objects matching this exact structure:
+            RULES:
+            1. DO NOT OVERLOAD: Find free gaps in the existing schedule. Never overlap with existing fixed sessions.
+            2. ACTIVE WINDOW: Only schedule between 04:00 (4 AM) and 22:00 (10 PM).
+            3. REASONABLE DURATION: If time is implied but not stated, choose a reasonable time (e.g., study 1-2h).
+            4. OUTPUT: Return only a JSON array matching this structure:
             [
               {
                 "title": "String",
@@ -81,7 +97,6 @@ class AiAssistantEngine @Inject constructor() {
                 "endMinute": 0
               }
             ]
-            Return nothing but the JSON array. Make sure the JSON is valid.
         """.trimIndent()
 
         try {
@@ -92,12 +107,10 @@ class AiAssistantEngine @Inject constructor() {
             Log.d(TAG, "scheduleGoal: Gemini raw response = $jsonText")
             if (jsonText.isNullOrBlank()) return@withContext emptyList()
             
-            // Define an intermediate DTO matching the prompt layout
             val listType = object : TypeToken<List<AiSessionDto>>() {}.type
             val dtos: List<AiSessionDto> = gson.fromJson(jsonText, listType)
             Log.d(TAG, "scheduleGoal: Parsed ${dtos.size} DTOs")
 
-            // Convert to actual models
             dtos.map { dto ->
                 val date = LocalDate.parse(dto.date, DateTimeFormatter.ISO_LOCAL_DATE)
                 val start = LocalDateTime.of(date, java.time.LocalTime.of(dto.startHour, dto.startMinute))
@@ -120,7 +133,7 @@ class AiAssistantEngine @Inject constructor() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "scheduleGoal: FAILED", e)
-            throw e // Let caller handle the error visibly
+            throw e
         }
     }
 
@@ -151,6 +164,11 @@ class AiAssistantEngine @Inject constructor() {
             e.printStackTrace()
             "Unable to generate discipline insights right now."
         }
+    }
+
+    private fun formatTimestamp(ts: com.google.firebase.Timestamp): String {
+        val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        return sdf.format(ts.toDate())
     }
 }
 

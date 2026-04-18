@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import nad.master.pa.data.model.Goal
 import nad.master.pa.data.model.GoalCategory
@@ -106,11 +107,15 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isAiLoading = true)
             try {
-                Log.d("DashboardVM", "submitAiRequest: Sending to Gemini: $req")
-                val generatedSessions = aiAssistantEngine.scheduleGoal(req)
+                // Fetch current week's sessions to avoid overlaps
+                val currentWeekId = nad.master.pa.data.scheduler.SchedulingEngine.getWeekId()
+                val existingSessions = sessionRepository.getSessionsForWeek(currentWeekId).first()
+                
+                Log.d("DashboardVM", "submitAiRequest: Sending to Gemini with ${existingSessions.size} existing sessions context")
+                val generatedSessions = aiAssistantEngine.scheduleGoal(req, existingSessions)
+                
                 Log.d("DashboardVM", "submitAiRequest: Gemini returned ${generatedSessions.size} sessions")
                 generatedSessions.forEach { session ->
-                    Log.d("DashboardVM", "submitAiRequest: Adding session '${session.title}' weekId=${session.weekId} date=${session.date}")
                     sessionRepository.addSession(session)
                 }
                 hideAiSheet()
@@ -133,6 +138,7 @@ class DashboardViewModel @Inject constructor(
         if (form.title.isBlank()) return
         viewModelScope.launch {
             try {
+                _uiState.value = _uiState.value.copy(isLoading = true)
                 Log.d("DashboardVM", "submitGoal: Adding goal '${form.title}'")
                 goalRepository.addGoal(
                     Goal(
@@ -144,11 +150,25 @@ class DashboardViewModel @Inject constructor(
                         endDate     = form.endDate
                     )
                 )
-                Log.d("DashboardVM", "submitGoal: Goal added successfully")
+                
+                // Automatically ask AI to plan this goal
+                val aiPrompt = "I have a new goal: ${form.title}. ${form.description}. " +
+                               "It starts on ${form.startDate} and ends on ${form.endDate}. " +
+                               "Please plan reasonable sessions for this goal."
+                
+                val currentWeekId = nad.master.pa.data.scheduler.SchedulingEngine.getWeekId()
+                val existingSessions = sessionRepository.getSessionsForWeek(currentWeekId).first()
+                
+                val generatedSessions = aiAssistantEngine.scheduleGoal(aiPrompt, existingSessions)
+                generatedSessions.forEach { session ->
+                    sessionRepository.addSession(session)
+                }
+                
+                Log.d("DashboardVM", "submitGoal: Goal added and AI sessions planned")
                 hideAddGoalSheet()
             } catch (e: Exception) {
                 Log.e("DashboardVM", "submitGoal: FAILED", e)
-                _uiState.value = _uiState.value.copy(error = e.message)
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
         }
     }

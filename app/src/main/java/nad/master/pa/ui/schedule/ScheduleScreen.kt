@@ -245,6 +245,20 @@ fun WeeklyTimetable(sessions: List<Session>, startDate: LocalDate) {
 
     val hourHeight = 80.dp
     val dayWidth = 120.dp
+    
+    val startHour = 4
+    val endHour = 22 // 10 PM
+    val totalHours = endHour - startHour
+
+    var currentTime by remember { mutableStateOf(LocalDateTime.now()) }
+    
+    // Refresh current time indicator every minute
+    LaunchedEffect(Unit) {
+        while (true) {
+            currentTime = LocalDateTime.now()
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -290,7 +304,7 @@ fun WeeklyTimetable(sessions: List<Session>, startDate: LocalDate) {
             Column(
                 modifier = Modifier.width(50.dp)
             ) {
-                for (hour in 0 until 24) {
+                for (hour in startHour until endHour) {
                     Box(
                         modifier = Modifier.height(hourHeight).fillMaxWidth(),
                         contentAlignment = Alignment.TopEnd
@@ -312,24 +326,60 @@ fun WeeklyTimetable(sessions: List<Session>, startDate: LocalDate) {
                 modifier = Modifier
                     .fillMaxSize()
                     .horizontalScroll(scrollStateX)
-                    .height(hourHeight * 24)
-                    .width(dayWidth * 7)
+                    .height(hourHeight * totalHours)
+                    .width((dayWidth.value * 7).dp)
             ) {
                 // Draw horizontal grid lines
-                for (hour in 0..24) {
+                for (hour in 0..totalHours) {
                     HorizontalDivider(
-                        modifier = Modifier.offset(y = hourHeight * hour),
+                        modifier = Modifier.offset(y = (hourHeight.value * hour).dp),
                         color = WarmCream.copy(alpha = 0.05f)
                     )
                 }
                 // Draw vertical grid lines
                 for (day in 0..7) {
+                    val isToday = startDate.plusDays(day.toLong()) == LocalDate.now()
+                    val xPos = (dayWidth.value * day).dp
+                    if (isToday) {
+                        Box(
+                            modifier = Modifier
+                                .offset(x = xPos)
+                                .width(dayWidth)
+                                .fillMaxHeight()
+                                .background(WarmCream.copy(alpha = 0.03f))
+                        )
+                    }
                     VerticalDivider(
-                        modifier = Modifier.offset(x = dayWidth * day),
+                        modifier = Modifier.offset(x = xPos),
                         color = WarmCream.copy(alpha = 0.05f)
                     )
                 }
                 
+                // Draw Current Time Indicator Line
+                if (currentTime.toLocalDate() >= startDate && currentTime.toLocalDate() <= startDate.plusDays(6)) {
+                    val daysDiff = java.time.temporal.ChronoUnit.DAYS.between(startDate, currentTime.toLocalDate()).toInt()
+                    val hourOffset = currentTime.hour + currentTime.minute / 60f
+                    if (hourOffset >= startHour && hourOffset <= endHour) {
+                        val yOffset = ((hourOffset - startHour) * hourHeight.value).dp
+                        
+                        // Small dot on the time column border
+                        Box(
+                            modifier = Modifier
+                                .offset(y = yOffset - 4.dp, x = (-2).dp)
+                                .size(8.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(CriticalRed)
+                        )
+
+                        // The line itself
+                        HorizontalDivider(
+                            modifier = Modifier.offset(y = yOffset).fillMaxWidth(),
+                            thickness = 1.dp,
+                            color = CriticalRed.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
                 // Draw Overlaid Sessions
                 sessions.forEach { session ->
                     val sessionDate = try { LocalDate.parse(session.date) } catch(e: Exception) { null }
@@ -342,18 +392,26 @@ fun WeeklyTimetable(sessions: List<Session>, startDate: LocalDate) {
                             val startOffsetHours = startDateTime.hour + startDateTime.minute / 60f
                             val durationHours = java.time.Duration.between(startDateTime, endDateTime).toMinutes() / 60f
                             
-                            TimetableSessionBlock(
-                                session = session,
-                                modifier = Modifier
-                                    .absoluteOffset(
-                                        x = dayWidth * daysDiff + 4.dp,
-                                        y = hourHeight * startOffsetHours + 2.dp
-                                    )
-                                    .size(
-                                        width = dayWidth - 8.dp,
-                                        height = (hourHeight * durationHours).coerceAtLeast(24.dp) - 4.dp
-                                    )
-                            )
+                            // Only draw if it's within our window (mostly)
+                            if (startOffsetHours >= startHour || (startOffsetHours + durationHours) > startHour) {
+                                val yValue = (startOffsetHours - startHour).coerceAtLeast(0f)
+                                val yPos = (hourHeight.value * yValue).dp
+                                val hPos = if (durationHours * hourHeight.value > 24f) (durationHours * hourHeight.value).dp else 24.dp
+                                
+                                TimetableSessionBlock(
+                                    session = session,
+                                    currentTime = currentTime,
+                                    modifier = Modifier
+                                        .absoluteOffset(
+                                            x = (dayWidth.value * daysDiff).dp + 4.dp,
+                                            y = yPos + 2.dp
+                                        )
+                                        .size(
+                                            width = dayWidth - 8.dp,
+                                            height = (hPos.value - 4f).dp
+                                        )
+                                )
+                            }
                         }
                     }
                 }
@@ -363,22 +421,36 @@ fun WeeklyTimetable(sessions: List<Session>, startDate: LocalDate) {
 }
 
 @Composable
-private fun TimetableSessionBlock(session: Session, modifier: Modifier) {
+private fun TimetableSessionBlock(session: Session, currentTime: LocalDateTime, modifier: Modifier) {
     val sessionColor = Color(session.getSessionColor())
+    val endDateTime = LocalDateTime.ofInstant(session.endTime.toDate().toInstant(), ZoneId.systemDefault())
+    val isPast = endDateTime.isBefore(currentTime)
+    val isActive = !isPast && LocalDateTime.ofInstant(session.startTime.toDate().toInstant(), ZoneId.systemDefault()).isBefore(currentTime)
+
     Card(
-        modifier = modifier,
+        modifier = modifier.then(
+            if (isActive) Modifier.border(2.dp, WarmCream, RoundedCornerShape(8.dp)) else Modifier
+        ),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = sessionColor.copy(alpha = 0.9f))
+        colors = CardDefaults.cardColors(
+            containerColor = sessionColor.copy(alpha = if (isPast) 0.35f else 0.9f)
+        )
     ) {
         Column(modifier = Modifier.padding(6.dp)) {
             Text(
                 session.title, 
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = DarkBrown),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold, 
+                    color = if (isPast) DarkBrown.copy(alpha = 0.6f) else DarkBrown
+                ),
                 maxLines = 1, overflow = TextOverflow.Ellipsis
             )
             Text(
                 formatTimestamp(session.startTime) + " - " + formatTimestamp(session.endTime),
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, color = DarkBrown.copy(alpha = 0.8f))
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = 9.sp, 
+                    color = if (isPast) DarkBrown.copy(alpha = 0.5f) else DarkBrown.copy(alpha = 0.8f)
+                )
             )
         }
     }
