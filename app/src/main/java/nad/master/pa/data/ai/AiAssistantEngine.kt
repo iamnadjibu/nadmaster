@@ -68,55 +68,59 @@ class AiAssistantEngine @Inject constructor() {
             }
 
         val prompt = """
-            You are a Personal Assistant AI for the NAD MASTER app.
-            Today's Date: $todayStr (Format yyyy-MM-dd)
+            You are a strict Personal Assistant AI for the NAD MASTER app.
+            Today's Date: $todayStr (yyyy-MM-dd)
             
             USER ACTIVE HOURS: 04:00 to 22:00. 
-            - Prioritize scheduling within this window.
-            - If strictly necessary to meet a deadline or if requested, you MAY schedule before 04:00 or after 22:00.
-            
             EXISTING SCHEDULE:
             $existingBrief
             
-            THE USER'S NEW REQUEST: "$requestText"
+            NEW REQUEST: "$requestText"
             
-            Analyze the request and generate an optimal schedule as a JSON array of Session objects.
-            RULES:
-            1. DO NOT OVERLOAD: Find free gaps in the existing schedule. Never overlap with existing fixed sessions.
-            2. PERIOD: Plan sessions from today up until the mentioned deadline or for a reasonable duration.
-            3. REASONABLE DURATION: If time is implied but not stated, choose a reasonable time (e.g., study 1-2h).
-            4. OUTPUT: Return only a JSON array matching this structure:
+            Analyze the request and return an optimal schedule.
+            
+            STRICT RULES:
+            1. OUTPUT: RETURN ONLY A JSON ARRAY. No preamble, no conversational text.
+            2. NO OVERLAPS: Check EXISTING SCHEDULE and never overlap.
+            3. CATEGORIES: Choose from [PERSONAL_GOALS, STUDY, QURAN_MEMORIZATION, TRAINING, CLASS, BREAK, SALAH].
+            4. DURATION: If not specified, use reasonable blocks (1-2 hours).
+            
+            FORMAT EXAMPLE:
             [
               {
-                "title": "String",
-                "description": "String",
-                "type": "FLEXIBLE", // FIXED, FLEXIBLE, BREAK, RELIGIOUS
-                "category": "PERSONAL_GOALS", // CLASS, TRAINING, QURAN_MEMORIZATION, STUDY, PERSONAL_GOALS, SALAH, TAHAJJUD, DHIKR, BREAK, SLACK, OTHER
-                "date": "yyyy-MM-dd",
-                "startHour": 17,
-                "startMinute": 0,
-                "endHour": 19,
-                "endMinute": 0
+                "title": "Study Math",
+                "description": "Calculus Chapter 5",
+                "type": "FLEXIBLE",
+                "category": "STUDY",
+                "date": "$todayStr",
+                "startHour": 17, "startMinute": 0,
+                "endHour": 19, "endMinute": 0
               }
             ]
         """.trimIndent()
 
         try {
-            Log.d(TAG, "scheduleGoal: API key present = ${BuildConfig.GEMINI_API_KEY.isNotBlank()}")
             Log.d(TAG, "scheduleGoal: Sending prompt to Gemini…")
             val response = generativeModel.generateContent(prompt)
-            val jsonText = response.text?.trim()?.removePrefix("```json")?.removeSuffix("```")?.trim()
-            Log.d(TAG, "scheduleGoal: Gemini raw response = $jsonText")
-            if (jsonText.isNullOrBlank()) return@withContext emptyList()
+            val rawText = response.text ?: ""
+            Log.d(TAG, "scheduleGoal: Gemini Raw Response = $rawText")
+            
+            val jsonText = extractJsonArray(rawText)
+            Log.d(TAG, "scheduleGoal: Extracted JSON = $jsonText")
+            
+            if (jsonText.isBlank()) {
+                Log.w(TAG, "scheduleGoal: No JSON array found in response")
+                return@withContext emptyList()
+            }
             
             val listType = object : TypeToken<List<AiSessionDto>>() {}.type
             val dtos: List<AiSessionDto> = gson.fromJson(jsonText, listType)
-            Log.d(TAG, "scheduleGoal: Parsed ${dtos.size} DTOs")
+            Log.d(TAG, "scheduleGoal: Successfully parsed ${dtos.size} sessions")
 
             dtos.map { dto ->
                 val date = LocalDate.parse(dto.date, DateTimeFormatter.ISO_LOCAL_DATE)
-                val start = LocalDateTime.of(date, java.time.LocalTime.of(dto.startHour, dto.startMinute))
-                val end = LocalDateTime.of(date, java.time.LocalTime.of(dto.endHour, dto.endMinute))
+                val start = LocalDateTime.of(date, java.time.LocalTime.of(dto.startHour % 24, dto.startMinute % 60))
+                val end = LocalDateTime.of(date, java.time.LocalTime.of(dto.endHour % 24, dto.endMinute % 60))
                 
                 val isOddHour = dto.startHour < 4 || dto.endHour > 22 || (dto.endHour == 22 && dto.endMinute > 0)
                 
@@ -124,22 +128,34 @@ class AiAssistantEngine @Inject constructor() {
                     id = UUID.randomUUID().toString(),
                     title = dto.title,
                     description = dto.description,
-                    type = SessionType.valueOf(dto.type),
-                    category = SessionCategory.valueOf(dto.category),
+                    type = try { SessionType.valueOf(dto.type.uppercase()) } catch(e: Exception) { SessionType.FLEXIBLE },
+                    category = try { SessionCategory.valueOf(dto.category.uppercase()) } catch(e: Exception) { SessionCategory.PERSONAL_GOALS },
                     startTime = Timestamp(java.util.Date.from(start.atZone(ZoneId.systemDefault()).toInstant())),
                     endTime = Timestamp(java.util.Date.from(end.atZone(ZoneId.systemDefault()).toInstant())),
                     date = dto.date,
                     weekId = nad.master.pa.data.scheduler.SchedulingEngine.getWeekId(date),
                     status = SessionStatus.UPCOMING,
-                    isFixed = dto.type == "FIXED",
+                    isFixed = dto.type.uppercase() == "FIXED",
                     needsConfirmation = isOddHour,
                     colorCode = "#D5CEA3"
                 )
             }
         } catch (e: Exception) {
-            Log.e(TAG, "scheduleGoal: FAILED", e)
+            Log.e(TAG, "scheduleGoal: AI Parsing or API error", e)
             throw e
         }
+    }
+
+    /**
+     * Extracts the first JSON array found in the text.
+     */
+    private fun extractJsonArray(text: String): String {
+        val start = text.indexOf("[")
+        val end = text.lastIndexOf("]")
+        if (start != -1 && end != -1 && end > start) {
+            return text.substring(start, end + 1)
+        }
+        return ""
     }
 
     /**

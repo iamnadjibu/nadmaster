@@ -115,13 +115,26 @@ class DashboardViewModel @Inject constructor(
                 Log.d("DashboardVM", "submitAiRequest: Sending to Gemini with range context")
                 val generatedSessions = aiAssistantEngine.scheduleGoal(req, existingSessions)
                 
+                if (generatedSessions.isEmpty()) {
+                    _uiState.value = _uiState.value.copy(
+                        isAiLoading = false, 
+                        error = "Assistant couldn't find a way to schedule that. Try being more specific about the time or goal."
+                    )
+                    return@launch
+                }
+
                 generatedSessions.forEach { session ->
                     sessionRepository.addSession(session)
                 }
                 hideAiSheet()
             } catch (e: Exception) {
                 Log.e("DashboardVM", "submitAiRequest: FAILED", e)
-                _uiState.value = _uiState.value.copy(isAiLoading = false, error = e.message)
+                val userError = when {
+                    e.message?.contains("API_KEY_INVALID", true) == true -> "AI API Key is invalid. Check local.properties."
+                    e.message?.contains("quota", true) == true -> "AI quota exceeded. Please try again later."
+                    else -> "AI Assistant Error: ${e.localizedMessage ?: "Unknown failure"}"
+                }
+                _uiState.value = _uiState.value.copy(isAiLoading = false, error = userError)
             }
         }
     }
