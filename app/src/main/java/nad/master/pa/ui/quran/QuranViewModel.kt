@@ -109,11 +109,7 @@ class QuranViewModel @Inject constructor(
                 )
 
                 // Trigger Performance Recompute
-                val sessions = sessionRepository.getTodaySessions().first()
-                val portions = quranRepository.getDailyPortions().first()
-                val todayPages = portions.filter { it.date == today }.sumOf { it.pagesCount.toDouble() }.toFloat() + pages
-                
-                performanceRepository.recomputeTodayPerformance(sessions, todayPages)
+                performanceRepository.refreshTodayPerformance()
 
             } catch (e: Exception) {
                 Log.e("QuranVM", "logDailyPortion failed", e)

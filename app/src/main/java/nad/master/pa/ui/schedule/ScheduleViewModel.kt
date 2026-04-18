@@ -39,11 +39,7 @@ class ScheduleViewModel @Inject constructor(
 
     private suspend fun refreshDiscipline() {
         try {
-            val sessions = sessionRepository.getTodaySessions().first()
-            val portions = quranRepository.getDailyPortions().first()
-            val today = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-            val pages = portions.filter { it.date == today }.sumOf { it.pagesCount.toDouble() }.toFloat()
-            performanceRepository.recomputeTodayPerformance(sessions, pages)
+            performanceRepository.refreshTodayPerformance()
         } catch (e: Exception) { Log.e("ScheduleVM", "refreshDiscipline failed", e) }
     }
 

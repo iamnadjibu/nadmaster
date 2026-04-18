@@ -21,7 +21,10 @@ import javax.inject.Inject
 class NotificationActionReceiver : BroadcastReceiver() {
 
     @Inject
-    lateinit var sessionRepository: SessionRepository
+    lateinit var sessionRepository: nad.master.pa.data.repository.SessionRepository
+
+    @Inject
+    lateinit var performanceRepository: nad.master.pa.data.repository.PerformanceRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -40,13 +43,15 @@ class NotificationActionReceiver : BroadcastReceiver() {
                 when (action) {
                     NotificationHelper.ACTION_DONE -> {
                         sessionRepository.updateSessionStatus(sessionId, SessionStatus.COMPLETED)
+                        performanceRepository.refreshTodayPerformance()
                     }
                     NotificationHelper.ACTION_MISSED -> {
                         sessionRepository.updateSessionStatus(sessionId, SessionStatus.MISSED)
+                        performanceRepository.refreshTodayPerformance()
                     }
                 }
             } catch (e: Exception) {
-                Log.e("NotifReceiver", "Error updating session status", e)
+                Log.e("NotifReceiver", "Error updating session and refreshing", e)
             }
         }
     }

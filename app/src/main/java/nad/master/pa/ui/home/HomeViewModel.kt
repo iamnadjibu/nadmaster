@@ -72,17 +72,16 @@ class HomeViewModel @Inject constructor(
             ) { sessions, goals, quranProgress, recentPerf ->
 
                 val now = LocalDateTime.now()
+                val todayStr = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                
                 val currentSession = sessions.find { session ->
                     try {
                         val sessionDate = LocalDate.parse(session.date)
-                        val start = LocalDateTime.of(sessionDate, java.time.LocalTime.of(
-                            (session.startTime.toDate().hours), 
-                            (session.startTime.toDate().minutes)
-                        ))
-                        val end = LocalDateTime.of(sessionDate, java.time.LocalTime.of(
-                            (session.endTime.toDate().hours), 
-                            (session.endTime.toDate().minutes)
-                        ))
+                        // Using reliable instant-based conversion
+                        val start = LocalDateTime.ofInstant(session.startTime.toDate().toInstant(), java.time.ZoneId.systemDefault())
+                        val end = LocalDateTime.ofInstant(session.endTime.toDate().toInstant(), java.time.ZoneId.systemDefault())
+                        
+                        // Ensure we check for basically "now" on the correct date
                         now.isAfter(start) && now.isBefore(end)
                     } catch (e: Exception) { false }
                 }
@@ -90,18 +89,17 @@ class HomeViewModel @Inject constructor(
                 val nextSession = sessions
                     .filter { session ->
                         try {
-                            val sessionDate = LocalDate.parse(session.date)
-                            val start = LocalDateTime.of(sessionDate, java.time.LocalTime.of(
-                                (session.startTime.toDate().hours), 
-                                (session.startTime.toDate().minutes)
-                            ))
+                            val start = LocalDateTime.ofInstant(session.startTime.toDate().toInstant(), java.time.ZoneId.systemDefault())
                             start.isAfter(now)
                         } catch (e: Exception) { false }
                     }
                     .sortedBy { it.startTime }
                     .firstOrNull()
 
-                val latestScore = recentPerf.lastOrNull()?.disciplineScore ?: 0f
+                // Explicitly find today's performance record for the dashboard
+                val todayPerf = recentPerf.find { it.date == todayStr }
+                val latestScore = todayPerf?.disciplineScore ?: 0f
+                
                 val weeklyRate  = if (recentPerf.isNotEmpty()) {
                     recentPerf.map { it.completionRate }.average().toFloat()
                 } else 0f
@@ -131,10 +129,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 sessionRepository.updateSessionStatus(sessionId, SessionStatus.COMPLETED)
-                val currentSessions = _uiState.value.todaySessions.map {
-                    if (it.id == sessionId) it.copy(status = SessionStatus.COMPLETED) else it
-                }
-                updateDailyDiscipline(currentSessions)
+                performanceRepository.refreshTodayPerformance()
             } catch (e: Exception) { Log.e("HomeVM", "markCompleted failed", e) }
         }
     }
@@ -143,10 +138,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 sessionRepository.updateSessionStatus(sessionId, SessionStatus.MISSED)
-                val currentSessions = _uiState.value.todaySessions.map {
-                    if (it.id == sessionId) it.copy(status = SessionStatus.MISSED) else it
-                }
-                updateDailyDiscipline(currentSessions)
+                performanceRepository.refreshTodayPerformance()
             } catch (e: Exception) { Log.e("HomeVM", "markMissed failed", e) }
         }
     }
@@ -155,22 +147,9 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 sessionRepository.updateSessionStatus(sessionId, SessionStatus.UNFINISHED)
-                val currentSessions = _uiState.value.todaySessions.map {
-                    if (it.id == sessionId) it.copy(status = SessionStatus.UNFINISHED) else it
-                }
-                updateDailyDiscipline(currentSessions)
+                performanceRepository.refreshTodayPerformance()
             } catch (e: Exception) { Log.e("HomeVM", "markUnfinished failed", e) }
         }
-    }
-
-    private suspend fun updateDailyDiscipline(sessions: List<Session>) {
-        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        // We can't easily get quran portions here without re-fetching, 
-        // but we can trust the quranProgress in the state for a snapshot
-        val quranPages = _uiState.value.quranProgress.versesMemorized / 10f // Reverse heuristic
-        
-        performanceRepository.recomputeTodayPerformance(sessions, quranPages)
-        Log.d("HomeVM", "updateDailyDiscipline: Logic triggered with ${sessions.size} sessions")
     }
 
     fun updateGoalProgress(goalId: String, progress: Float) {

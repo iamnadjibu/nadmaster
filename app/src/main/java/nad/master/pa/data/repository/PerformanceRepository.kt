@@ -47,6 +47,32 @@ class PerformanceRepository @Inject constructor(
             .await()
     }
 
+    /** 
+     * Centralized refresh: Fetches latest sessions and quran progress from Firestore 
+     * and performs a full recompute for today.
+     */
+    suspend fun refreshTodayPerformance() {
+        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        
+        // 1. Fetch Today's Sessions
+        val sessionsSnapshot = userDoc.collection("sessions")
+            .whereEqualTo("date", today)
+            .get()
+            .await()
+        val sessions = sessionsSnapshot.toObjects(nad.master.pa.data.model.Session::class.java)
+        
+        // 2. Fetch Today's Quran Portions
+        val portionsSnapshot = userDoc.collection("quranDailyPortions")
+            .whereEqualTo("date", today)
+            .get()
+            .await()
+        val totalPages = portionsSnapshot.toObjects(nad.master.pa.data.model.QuranDailyPortion::class.java)
+            .sumOf { it.pagesCount.toDouble() }.toFloat()
+
+        // 3. Recompute
+        recomputeTodayPerformance(sessions, totalPages)
+    }
+
     /** Recompute today's performance from lists of sessions and sum of Quran portions. */
     suspend fun recomputeTodayPerformance(
         sessions: List<nad.master.pa.data.model.Session>,
