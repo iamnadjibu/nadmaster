@@ -1,15 +1,19 @@
 package nad.master.pa.ui.quran
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nad.master.pa.data.local.QuranData
+import nad.master.pa.data.model.QuranDailyPortion
 import nad.master.pa.data.model.QuranProgress
 import nad.master.pa.data.model.SurahData
 import nad.master.pa.data.model.SurahStatus
@@ -45,6 +49,11 @@ class QuranViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(QuranUiState())
     val uiState: StateFlow<QuranUiState> = _uiState.asStateFlow()
 
+    // Stream of daily portions for graph
+    val dailyPortions: StateFlow<List<QuranDailyPortion>> = quranRepository.getDailyPortions()
+        .catch { Log.e("QuranVM", "Error fetching portions", it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     init {
         loadQuranData()
     }
@@ -65,6 +74,41 @@ class QuranViewModel @Inject constructor(
             }
             .catch { e -> _uiState.value = _uiState.value.copy(isLoading = false, error = e.message) }
             .collect { state -> _uiState.value = state }
+        }
+    }
+
+    fun logDailyPortion(value: Float, unit: String) {
+        viewModelScope.launch {
+            try {
+                val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                val pages = if (unit == "LINES") value / 15f else value
+                val lines = if (unit == "LINES") value.toInt() else (value * 15).toInt()
+                
+                val portion = QuranDailyPortion(
+                    date = today,
+                    pagesCount = pages,
+                    linesCount = lines,
+                    unit = unit
+                )
+                quranRepository.saveDailyPortion(portion)
+                
+                // Update overall progress total verses (approximate mapping)
+                // In a perfect system we'd track exactly which verses, but for "portion" 
+                // tracking 15 lines = 1 page is the standard heuristic.
+                // One page of standard Mushaf has ~15 lines and varying verses.
+                // We'll update the 'versesMemorized' count by a rough average of 10 verses per page.
+                val approxVerses = (pages * 10).toInt()
+                val newTotal = _uiState.value.progress.versesMemorized + approxVerses
+                
+                quranRepository.updateQuranProgress(
+                    _uiState.value.progress.copy(
+                        versesMemorized = newTotal,
+                        lastSessionDate = today
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e("QuranVM", "logDailyPortion failed", e)
+            }
         }
     }
 

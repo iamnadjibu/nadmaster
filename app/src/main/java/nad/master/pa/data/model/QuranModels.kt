@@ -116,3 +116,17 @@ data class Hadith(
     val category: String = "",
     val date: String = ""      // "yyyy-MM-dd" — daily rotation
 )
+
+/**
+ * Daily memorization entry.
+ */
+data class QuranDailyPortion(
+    @DocumentId
+    val id: String = "",
+    val date: String = "",       // "yyyy-MM-dd"
+    val pagesCount: Float = 0f,
+    val linesCount: Int = 0,
+    val unit: String = "PAGES",  // "PAGES" or "LINES"
+    val timestamp: Long = System.currentTimeMillis()
+)
+

@@ -1,0 +1,148 @@
+﻿WARNING: We recommend using a newer Android Gradle plugin to use compileSdk = 35
+
+This Android Gradle plugin (8.5.2) was tested up to compileSdk = 34.
+
+You are strongly encouraged to update your project to use a newer
+Android Gradle plugin that has been tested with compileSdk = 35.
+
+If you are already using the latest version of the Android Gradle plugin,
+you may need to wait until a newer version with support for compileSdk = 35 is available.
+
+For more information refer to the compatibility table:
+https://d.android.com/r/tools/api-level-support
+
+To suppress this warning, add/update
+    android.suppressUnsupportedCompileSdk=35
+to this project's gradle.properties.
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig UP-TO-DATE
+> Task :app:checkDebugAarMetadata UP-TO-DATE
+> Task :app:generateDebugResValues UP-TO-DATE
+> Task :app:processDebugGoogleServices UP-TO-DATE
+> Task :app:mapDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateDebugResources UP-TO-DATE
+> Task :app:mergeDebugResources UP-TO-DATE
+> Task :app:packageDebugResources UP-TO-DATE
+> Task :app:parseDebugLocalResources UP-TO-DATE
+> Task :app:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksDebug UP-TO-DATE
+> Task :app:processDebugMainManifest UP-TO-DATE
+> Task :app:processDebugManifest UP-TO-DATE
+> Task :app:processDebugManifestForPackage UP-TO-DATE
+> Task :app:processDebugResources UP-TO-DATE
+> Task :app:kspDebugKotlin UP-TO-DATE
+
+> Task :app:compileDebugKotlin FAILED
+./gradlew : e: 
+file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/data/repository/QuranRepository.kt:93:43 Unresolved 
+reference 'QuranDailyPortion'.
+At line:1 char:1
++ ./gradlew :app:compileDebugKotlin > build_log.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (e: file:///C:/U...nDailyPortion'.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/data/repository/QuranRepository.kt:101:39 
+Unresolved reference 'QuranDailyPortion'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/data/repository/QuranRepository.kt:106:28 Argument 
+type mismatch: actual type is 'kotlin.collections.(Mutable)List<T!>?', but 'K?' was expected.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/data/repository/QuranRepository.kt:106:48 
+Unresolved reference 'QuranDailyPortion'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/data/repository/QuranRepository.kt:106:48 Argument 
+type mismatch: actual type is 'java.lang.Class<T>', but 'java.lang.Class<T!>' was expected.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/data/repository/QuranRepository.kt:106:73 
+Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+val <T> KClass<T>.java: Class<T>
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/data/repository/QuranRepository.kt:106:82 Argument 
+type mismatch: actual type is 'kotlin.collections.List<T>', but 'K' was expected.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/dashboard/DashboardScreen.kt:100:25 Unresolved 
+reference 'LocalDate'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/dashboard/DashboardScreen.kt:100:48 Unresolved 
+reference 'DateTimeFormatter'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:211:29 Unresolved 
+reference 'LocalDate'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:212:21 Unresolved 
+reference 'LocalDate'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:221:30 Unresolved 
+reference 'LocalDate'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:222:19 Unresolved 
+reference 'month'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:222:28 Unresolved 
+reference 'LocalDate'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:222:59 Unresolved 
+reference 'year'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:222:67 Unresolved 
+reference 'LocalDate'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:224:20 Unresolved 
+reference 'LocalDate'.
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:249:41 Overload resolution 
+ambiguity between candidates:
+@IntrinsicConstEvaluation() fun div(other: Byte): Float
+@IntrinsicConstEvaluation() fun div(other: Double): Double
+@IntrinsicConstEvaluation() fun div(other: Float): Float
+@IntrinsicConstEvaluation() fun div(other: Int): Float
+@IntrinsicConstEvaluation() fun div(other: Long): Float
+@IntrinsicConstEvaluation() fun div(other: Short): Float
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:260:65 Overload resolution 
+ambiguity between candidates:
+@IntrinsicConstEvaluation() fun times(other: Byte): Int
+@IntrinsicConstEvaluation() fun times(other: Double): Double
+@IntrinsicConstEvaluation() fun times(other: Float): Float
+@IntrinsicConstEvaluation() fun times(other: Int): Int
+@IntrinsicConstEvaluation() fun times(other: Long): Long
+@IntrinsicConstEvaluation() fun times(other: Short): Int
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:260:83 Overload resolution 
+ambiguity between candidates:
+@IntrinsicConstEvaluation() fun minus(other: Byte): Float
+@IntrinsicConstEvaluation() fun minus(other: Double): Double
+@IntrinsicConstEvaluation() fun minus(other: Float): Float
+@IntrinsicConstEvaluation() fun minus(other: Int): Float
+@IntrinsicConstEvaluation() fun minus(other: Long): Float
+@IntrinsicConstEvaluation() fun minus(other: Short): Float
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:260:95 Overload resolution 
+ambiguity between candidates:
+@IntrinsicConstEvaluation() fun times(other: Byte): Int
+@IntrinsicConstEvaluation() fun times(other: Double): Double
+@IntrinsicConstEvaluation() fun times(other: Float): Float
+@IntrinsicConstEvaluation() fun times(other: Int): Int
+@IntrinsicConstEvaluation() fun times(other: Long): Long
+@IntrinsicConstEvaluation() fun times(other: Short): Int
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:260:117 Overload 
+resolution ambiguity between candidates:
+@IntrinsicConstEvaluation() fun div(other: Byte): Float
+@IntrinsicConstEvaluation() fun div(other: Double): Double
+@IntrinsicConstEvaluation() fun div(other: Float): Float
+@IntrinsicConstEvaluation() fun div(other: Int): Float
+@IntrinsicConstEvaluation() fun div(other: Long): Float
+@IntrinsicConstEvaluation() fun div(other: Short): Float
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:260:130 None of the 
+following candidates is applicable:
+@InlineOnly() fun BigDecimal.times(other: BigDecimal): BigDecimal
+@InlineOnly() fun BigInteger.times(other: BigInteger): BigInteger
+e: file:///C:/Users/uwaba/nadmaster/app/src/main/java/nad/master/pa/ui/quran/QuranScreen.kt:269:71 Overload resolution 
+ambiguity between candidates:
+@IntrinsicConstEvaluation() fun times(other: Byte): Int
+@IntrinsicConstEvaluation() fun times(other: Double): Double
+@IntrinsicConstEvaluation() fun times(other: Float): Float
+@IntrinsicConstEvaluation() fun times(other: Int): Int
+@IntrinsicConstEvaluation() fun times(other: Long): Long
+@IntrinsicConstEvaluation() fun times(other: Short): Int
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDebugKotlin'.
+> A failure occurred while executing 
+org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 3s
+17 actionable tasks: 1 executed, 16 up-to-date

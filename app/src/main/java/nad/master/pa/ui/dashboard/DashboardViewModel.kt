@@ -174,17 +174,32 @@ class DashboardViewModel @Inject constructor(
                 // Fetch sessions from start to end of goal for context
                 val existingRange = sessionRepository.getSessionsInRange(form.startDate, form.endDate)
                 
-                // Automatically ask AI to plan this goal until the deadline
+                // Automatically ask AI to plan this goal and segment it
                 val aiPrompt = "I have a new goal: ${form.title}. ${form.description}. " +
                                "It starts on ${form.startDate} and must be completed by ${form.endDate}. " +
                                "Please plan reasonable sessions across this entire period to ensure I finish by the deadline."
                 
+                // Concurrent AI requests (not strictly parallel here for simplicity, but both are called)
                 val generatedSessions = aiAssistantEngine.scheduleGoal(aiPrompt, existingRange)
+                val generatedMilestones = aiAssistantEngine.segmentGoal(form.title, form.description, form.startDate, form.endDate)
+                
+                val newGoal = Goal(
+                    title       = form.title,
+                    description = form.description,
+                    category    = form.category,
+                    priority    = form.priority,
+                    startDate   = form.startDate,
+                    endDate     = form.endDate,
+                    milestones  = generatedMilestones
+                )
+                
+                goalRepository.addGoal(newGoal)
+                
                 generatedSessions.forEach { session ->
                     sessionRepository.addSession(session)
                 }
                 
-                Log.d("DashboardVM", "submitGoal: Goal added and multi-week AI sessions planned")
+                Log.d("DashboardVM", "submitGoal: Goal added with ${generatedMilestones.size} milestones and sessions planned")
                 hideAddGoalSheet()
             } catch (e: Exception) {
                 Log.e("DashboardVM", "submitGoal: FAILED", e)

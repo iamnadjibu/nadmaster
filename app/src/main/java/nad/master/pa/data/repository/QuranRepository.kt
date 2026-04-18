@@ -7,6 +7,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import nad.master.pa.data.model.QuranDailyPortion
 import nad.master.pa.data.model.QuranProgress
 import nad.master.pa.data.model.SurahStatus
 import nad.master.pa.data.model.SurahTracking
@@ -87,5 +88,25 @@ class QuranRepository @Inject constructor(
                 SetOptions.merge()
             )
             .await()
+    }
+
+    /** Save a daily progress entry. */
+    suspend fun saveDailyPortion(portion: QuranDailyPortion) {
+        userDoc.collection("quranDailyPortions")
+            .document()
+            .set(portion)
+            .await()
+    }
+
+    /** Get all daily portions for the current journey. */
+    fun getDailyPortions(): Flow<List<QuranDailyPortion>> = callbackFlow {
+        val listener = userDoc.collection("quranDailyPortions")
+            .orderBy("timestamp")
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) { close(error); return@addSnapshotListener }
+                val list = snapshot?.toObjects(QuranDailyPortion::class.java) ?: emptyList()
+                trySend(list)
+            }
+        awaitClose { listener.remove() }
     }
 }

@@ -34,8 +34,15 @@ data class Milestone(
     val id: String = "",
     val title: String = "",
     val isCompleted: Boolean = false,
-    val dueDate: String = ""
+    val targetDate: String = "", // "yyyy-MM-dd"
+    val type: MilestoneType = MilestoneType.DAILY
 )
+
+enum class MilestoneType {
+    WEEKLY,
+    DAILY,
+    FIXED_DEADLINE
+}
 
 enum class GoalCategory {
     ACADEMIC,

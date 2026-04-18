@@ -30,6 +30,8 @@ import nad.master.pa.data.model.Goal
 import nad.master.pa.data.model.GoalCategory
 import nad.master.pa.data.model.GoalPriority
 import nad.master.pa.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -96,9 +98,22 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                 item { DisciplineInsightCard(insight) }
             }
 
+            // Today's Daily Goals (from all active goals)
+            val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val todayMilestones = state.activeGoals.flatMap { g -> 
+                g.milestones.filter { it.targetDate == today && it.type == nad.master.pa.data.model.MilestoneType.DAILY } 
+            }
+            
+            if (todayMilestones.isNotEmpty()) {
+                item { SectionHeader(title = "Today's Daily Goals") }
+                items(todayMilestones) { milestone ->
+                    MilestoneItem(milestone)
+                }
+            }
+
             // Active goals header
             item {
-                SectionHeader(title = "Active Goals (${state.activeGoals.size})")
+                SectionHeader(title = "Active Goal Roadmaps (${state.activeGoals.size})")
             }
 
             if (state.activeGoals.isEmpty()) {
@@ -253,6 +268,29 @@ private fun ActiveGoalCard(
                 trackColor = WarmCream.copy(alpha = 0.12f)
             )
 
+            // Milestones Preview
+            if (goal.milestones.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Roadmap Highlights:", style = MaterialTheme.typography.labelSmall, color = WarmCream.copy(alpha = 0.5f))
+                    goal.milestones.take(3).forEach { ms ->
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(
+                                imageVector = if (ms.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                                contentDescription = null,
+                                tint = if (ms.isCompleted) IslamicGreen else WarmCream.copy(0.3f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = ms.title,
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp),
+                                color = if (ms.isCompleted) IslamicGreen else LightCream.copy(0.7f),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+
             // Details row
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -275,6 +313,36 @@ private fun ActiveGoalCard(
                         Icon(Icons.Filled.Delete, "Delete", tint = CriticalRed, modifier = Modifier.size(20.dp))
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MilestoneItem(milestone: nad.master.pa.data.model.Milestone) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MediumBrown.copy(0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = if (milestone.isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = if (milestone.isCompleted) IslamicGreen else WarmCream.copy(0.3f),
+                modifier = Modifier.size(20.dp)
+            )
+            Column {
+                Text(milestone.title, style = MaterialTheme.typography.bodyMedium, color = LightCream)
+                Text(
+                    text = "${milestone.type} • ${milestone.targetDate}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = WarmCream.copy(alpha = 0.5f)
+                )
             }
         }
     }

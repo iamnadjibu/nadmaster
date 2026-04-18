@@ -26,9 +26,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nad.master.pa.data.local.DhikrData
 import nad.master.pa.data.local.QuranData
 import nad.master.pa.data.model.DhikrCategory
+import nad.master.pa.data.model.QuranDailyPortion
 import nad.master.pa.data.model.SurahData
 import nad.master.pa.data.model.SurahStatus
 import nad.master.pa.ui.theme.*
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +79,29 @@ fun QuranScreen(viewModel: QuranViewModel = hiltViewModel()) {
                 )
             }
 
+            // ── Daily Portion Recording ──────────────────────────────────────
+            item {
+                DailyPortionCard(onLog = viewModel::logDailyPortion)
+            }
+
+            // ── Your Commitment Score (Graph) ────────────────────────────────
+            item {
+                val sessions by viewModel.dailyPortions.collectAsStateWithLifecycle()
+                CommitmentScoreGraph(
+                    dailyPortions = sessions,
+                    targetMonthlyPages = 20f
+                )
+            }
+
+            item {
+                BehindScheduleCard(
+                    daysOffset    = state.daysAhead,
+                    versesMemorized = state.progress.versesMemorized,
+                    dailyTarget   = state.progress.dailyVerseTarget,
+                    startDate     = state.progress.startDate
+                )
+            }
+
             // ── Quran Juzz Tracker ───────────────────────────────────────────
             item {
                 Text(
@@ -116,15 +142,152 @@ fun QuranScreen(viewModel: QuranViewModel = hiltViewModel()) {
                     source        = dua.source
                 )
             }
+        }
+    }
+}
 
-            // ── Where Should I Be? ───────────────────────────────────────────
-            item {
-                BehindScheduleCard(
-                    daysOffset    = state.daysAhead,
-                    versesMemorized = state.progress.versesMemorized,
-                    dailyTarget   = state.progress.dailyVerseTarget,
-                    startDate     = state.progress.startDate
+@Composable
+private fun DailyPortionCard(onLog: (Float, String) -> Unit) {
+    var valueStr by remember { mutableStateOf("") }
+    var unit by remember { mutableStateOf("PAGES") }
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MediumBrown)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                "Record Daily Portion",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = LightCream)
+            )
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = valueStr,
+                    onValueChange = { valueStr = it },
+                    placeholder = { Text("Amount", color = WarmCream.copy(0.4f)) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = LightCream,
+                        unfocusedTextColor = WarmCream,
+                        focusedBorderColor = IslamicGreen
+                    ),
+                    singleLine = true
                 )
+                
+                Box {
+                    Button(
+                        onClick = { expanded = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = WarmCream.copy(0.1f))
+                    ) {
+                        Text(unit, color = WarmCream)
+                        Icon(Icons.Default.ArrowDropDown, null, tint = WarmCream)
+                    }
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenuItem(text = { Text("Pages") }, onClick = { unit = "PAGES"; expanded = false })
+                        DropdownMenuItem(text = { Text("Lines") }, onClick = { unit = "LINES"; expanded = false })
+                    }
+                }
+            }
+            
+            Button(
+                onClick = {
+                    val v = valueStr.toFloatOrNull() ?: 0f
+                    if (v > 0) onLog(v, unit)
+                    valueStr = ""
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = IslamicGreen),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Log Progress", fontWeight = FontWeight.SemiBold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommitmentScoreGraph(dailyPortions: List<nad.master.pa.data.model.QuranDailyPortion>, targetMonthlyPages: Float) {
+    val currentDayOfMonth = LocalDate.now().dayOfMonth
+    val totalDays = LocalDate.now().lengthOfMonth()
+    
+    // Calculate cumulative progress
+    val dailyTotals = mutableMapOf<Int, Float>()
+    var currentSum = 0f
+    
+    // Sort portions by day
+    val portionsByDay = dailyPortions
+        .filter { 
+            val date = try { LocalDate.parse(it.date) } catch(e: Exception) { null }
+            date?.month == LocalDate.now().month && date?.year == LocalDate.now().year
+        }
+        .groupBy { LocalDate.parse(it.date).dayOfMonth }
+    
+    for (day in 1..totalDays) {
+        val daySum = portionsByDay[day]?.sumOf { it.pagesCount.toDouble() }?.toFloat() ?: 0f
+        currentSum += daySum
+        dailyTotals[day] = currentSum
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DarkBrown.copy(0.3f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                "Commitment Status (Pages vs Target)",
+                style = MaterialTheme.typography.labelMedium,
+                color = WarmCream.copy(0.5f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Box(modifier = Modifier.fillMaxWidth().height(160.dp)) {
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    val width = size.width
+                    val height = size.height
+                    val spacing = width / (totalDays - 1).coerceAtLeast(1).toFloat()
+                    val maxHeight = targetMonthlyPages.coerceAtLeast(currentSum + 5f)
+                    
+                    // Grid lines (horizontal)
+                    for (i in 0..4) {
+                        val y = height - (i.toFloat() * height / 4f)
+                        drawLine(WarmCream.copy(0.05f), start = androidx.compose.ui.geometry.Offset(0f, y), end = androidx.compose.ui.geometry.Offset(width, y))
+                    }
+
+                    // Target Line (Linear)
+                    val targetPoints = (0 until totalDays).map { day ->
+                        val x = day.toFloat() * spacing
+                        val y = height - (day.toFloat() + 1f) * (targetMonthlyPages / totalDays.toFloat()) * (height / maxHeight)
+                        androidx.compose.ui.geometry.Offset(x, y)
+                    }
+                    for (i in 0 until targetPoints.size - 1) {
+                        drawLine(WarmCream.copy(0.2f), targetPoints[i], targetPoints[i+1], strokeWidth = 2f, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f))
+                    }
+
+                    // Actual Progress Line
+                    val actualPoints = (1..currentDayOfMonth).map { day ->
+                        val pages = dailyTotals[day] ?: 0f
+                        val x = (day.toFloat() - 1f) * spacing
+                        val y = height - (pages * (height / maxHeight))
+                        androidx.compose.ui.geometry.Offset(x, y)
+                    }
+                    
+                    if (actualPoints.size > 1) {
+                        for (i in 0 until actualPoints.size - 1) {
+                            drawLine(IslamicGreen, actualPoints[i], actualPoints[i+1], strokeWidth = 4f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                        }
+                    }
+                }
+            }
+            
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Day 1", style = MaterialTheme.typography.labelSmall, color = WarmCream.copy(0.4f))
+                Text("Today: ${String.format("%.1f", currentSum)} pgs", style = MaterialTheme.typography.labelSmall, color = IslamicGreen)
+                Text("Goal: $targetMonthlyPages pgs", style = MaterialTheme.typography.labelSmall, color = WarmCream.copy(0.4f))
             }
         }
     }

@@ -187,11 +187,77 @@ class AiAssistantEngine @Inject constructor() {
         response.text?.trim() ?: "Keep pushing forward!"
     }
 
+    /**
+     * Segments a top-level goal into a hierarchical list of milestones (weekly/daily).
+     */
+    suspend fun segmentGoal(
+        goalTitle: String,
+        description: String,
+        startDate: String,
+        endDate: String
+    ): List<nad.master.pa.data.model.Milestone> = withContext(Dispatchers.IO) {
+        val prompt = """
+            You are a project management expert. 
+            Goal: "$goalTitle"
+            Description: "$description"
+            Timeline: $startDate to $endDate
+            
+            Segment this goal into a structured roadmap.
+            1. Generate WEEKLY milestones for each week in the timeline.
+            2. Generate DAILY milestones for the first week to get started immediately.
+            
+            OUTPUT: RETURN ONLY A JSON ARRAY of milestones.
+            Format:
+            [
+              {
+                "title": "Setup environment",
+                "targetDate": "yyyy-MM-dd",
+                "type": "DAILY"
+              },
+              {
+                "title": "Complete Chapter 1",
+                "targetDate": "yyyy-MM-dd",
+                "type": "WEEKLY"
+              }
+            ]
+            Choose types from [WEEKLY, DAILY].
+        """.trimIndent()
+
+        try {
+            val response = generativeModel.generateContent(prompt)
+            val rawText = response.text ?: ""
+            val jsonText = extractJsonArray(rawText)
+            
+            if (jsonText.isBlank()) return@withContext emptyList()
+            
+            val listType = object : TypeToken<List<AiMilestoneDto>>() {}.type
+            val dtos: List<AiMilestoneDto> = gson.fromJson(jsonText, listType)
+            
+            dtos.map { dto ->
+                nad.master.pa.data.model.Milestone(
+                    id = UUID.randomUUID().toString(),
+                    title = dto.title,
+                    targetDate = dto.targetDate,
+                    type = try { nad.master.pa.data.model.MilestoneType.valueOf(dto.type.uppercase()) } catch(e: Exception) { nad.master.pa.data.model.MilestoneType.DAILY }
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "segmentGoal: FAILED", e)
+            emptyList()
+        }
+    }
+
     private fun formatTimestamp(ts: com.google.firebase.Timestamp): String {
         val sdf = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
         return sdf.format(ts.toDate())
     }
 }
+
+private data class AiMilestoneDto(
+    val title: String,
+    val targetDate: String,
+    val type: String
+)
 
 // Intermediate DTO to simplify complex object parsing for AI
 private data class AiSessionDto(
