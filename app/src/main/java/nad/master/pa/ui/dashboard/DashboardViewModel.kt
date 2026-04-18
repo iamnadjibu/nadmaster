@@ -114,34 +114,59 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isAiLoading = true)
             try {
-                // Fetch upcoming sessions for a 2-week range to provide broad context
+                // Prepare context for AI
                 val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-                val futureLimit = LocalDate.now().plusWeeks(2).format(DateTimeFormatter.ISO_LOCAL_DATE)
-                val existingSessions = sessionRepository.getSessionsInRange(today, futureLimit)
+                val activeGoalTitles = _uiState.value.activeGoals.map { it.title }
+                val contextJson = "Active Goals: $activeGoalTitles, Today: $today"
+
+                val actions = aiAssistantEngine.processIntelligentCommand(req, contextJson)
                 
-                Log.d("DashboardVM", "submitAiRequest: Sending to Gemini with range context")
-                val generatedSessions = aiAssistantEngine.scheduleGoal(req, existingSessions)
-                
-                if (generatedSessions.isEmpty()) {
+                if (actions.isEmpty()) {
                     _uiState.value = _uiState.value.copy(
                         isAiLoading = false, 
-                        error = "Assistant couldn't find a way to schedule that. Try being more specific about the time or goal."
+                        error = "Assistant couldn't understand that command. Try being more specific."
                     )
                     return@launch
                 }
 
-                generatedSessions.forEach { session ->
-                    sessionRepository.addSession(session)
+                // Execute Actions
+                actions.forEach { action ->
+                    executeAiAction(action)
                 }
-                hideAiSheet()
+
+                _uiState.value = _uiState.value.copy(isAiLoading = false, showAiSheet = false)
+                _aiRequest.value = ""
             } catch (e: Exception) {
                 Log.e("DashboardVM", "submitAiRequest: FAILED", e)
-                val userError = when {
-                    e.message?.contains("API_KEY_INVALID", true) == true -> "AI API Key is invalid. Check local.properties."
-                    e.message?.contains("quota", true) == true -> "AI quota exceeded. Please try again later."
-                    else -> "AI Assistant Error: ${e.localizedMessage ?: "Unknown failure"}"
-                }
-                _uiState.value = _uiState.value.copy(isAiLoading = false, error = userError)
+                _uiState.value = _uiState.value.copy(isAiLoading = false, error = e.message)
+            }
+        }
+    }
+
+    private suspend fun executeAiAction(action: nad.master.pa.data.ai.AiAction) {
+        val gson = com.google.gson.Gson()
+        when (action.type.uppercase()) {
+            "ADD_SESSIONS" -> {
+                val sessionsString = gson.toJson(action.data)
+                val type = object : com.google.gson.reflect.TypeToken<List<nad.master.pa.data.model.Session>>() {}.type
+                val sessions: List<nad.master.pa.data.model.Session> = gson.fromJson(sessionsString, type)
+                sessions.forEach { sessionRepository.addSession(it) }
+            }
+            "DELETE_SESSIONS" -> {
+                val idsString = gson.toJson(action.data)
+                val ids: List<String> = gson.fromJson(idsString, object : com.google.gson.reflect.TypeToken<List<String>>() {}.type)
+                ids.forEach { sessionRepository.deleteSession(it) }
+            }
+            "LOG_QURAN" -> {
+                // Note: Logic moved to follow-up to ensure QuranRepository is correctly updated
+            }
+            "CREATE_GOAL" -> {
+                val goalJson = gson.toJson(action.data)
+                val goal = gson.fromJson(goalJson, nad.master.pa.data.model.Goal::class.java)
+                goalRepository.addGoal(goal)
+            }
+            "ANALYZE" -> {
+                _uiState.value = _uiState.value.copy(disciplineInsight = action.data.toString())
             }
         }
     }

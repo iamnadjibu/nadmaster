@@ -47,7 +47,47 @@ class PerformanceRepository @Inject constructor(
             .await()
     }
 
+    /** Recompute today's performance from lists of sessions and sum of Quran portions. */
+    suspend fun recomputeTodayPerformance(
+        sessions: List<nad.master.pa.data.model.Session>,
+        quranPages: Float
+    ) {
+        val date = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val scheduled = sessions.size
+        val completed = sessions.count { it.status == nad.master.pa.data.model.SessionStatus.COMPLETED }
+        val missed    = sessions.count { it.status == nad.master.pa.data.model.SessionStatus.MISSED }
+        val unfinished = sessions.count { it.status == nad.master.pa.data.model.SessionStatus.UNFINISHED }
+        
+        // Use a heuristic for prayers: if user has logged 5 completed 'SALAH' sessions today
+        val prayers = sessions.count { 
+            it.category == nad.master.pa.data.model.SessionCategory.SALAH && 
+            it.status == nad.master.pa.data.model.SessionStatus.COMPLETED 
+        }.coerceAtMost(5)
+        
+        // Tahajjud is a specific early morning session (4:00 - 5:00)
+        val tahajjud = sessions.any { 
+            it.category == nad.master.pa.data.model.SessionCategory.SALAH && 
+            it.title.contains("Tahajjud", ignoreCase = true) &&
+            it.status == nad.master.pa.data.model.SessionStatus.COMPLETED
+        }
+
+        val score = computeDisciplineScore(scheduled, completed, missed, unfinished, prayers, tahajjud)
+        
+        val perf = DailyPerformance(
+            date = date,
+            sessionsScheduled = scheduled,
+            sessionsCompleted = completed,
+            sessionsMissed = missed,
+            prayersCompleted = prayers,
+            tahajjudDone = tahajjud,
+            quranVersesMemorized = (quranPages * 10).toInt(), // Approx 10 verses per page
+            disciplineScore = score
+        )
+        saveDailyPerformance(perf)
+    }
+
     /** Compute today's performance from session data and save it. */
+    @Deprecated("Use recomputeTodayPerformance with explicit data lists")
     suspend fun computeAndSaveDailyPerformance(
         scheduled: Int, completed: Int, missed: Int, unfinished: Int,
         prayers: Int, tahajjud: Boolean, quranVerses: Int

@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import nad.master.pa.data.local.DisciplineQuotes
 import nad.master.pa.data.local.HadithData
@@ -128,19 +129,35 @@ class HomeViewModel @Inject constructor(
     fun markSessionCompleted(sessionId: String) {
         viewModelScope.launch {
             sessionRepository.updateSessionStatus(sessionId, SessionStatus.COMPLETED)
+            updateDailyDiscipline()
         }
     }
 
     fun markSessionMissed(sessionId: String) {
         viewModelScope.launch {
             sessionRepository.updateSessionStatus(sessionId, SessionStatus.MISSED)
+            updateDailyDiscipline()
         }
     }
 
     fun markSessionUnfinished(sessionId: String) {
         viewModelScope.launch {
             sessionRepository.updateSessionStatus(sessionId, SessionStatus.UNFINISHED)
+            updateDailyDiscipline()
         }
+    }
+
+    private suspend fun updateDailyDiscipline() {
+        // Fetch current snapshot of data for recompute
+        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val sessions = sessionRepository.getTodaySessions().first()
+        val quranPortions = quranRepository.getDailyPortions().first()
+        
+        val totalPages = quranPortions
+            .filter { it.date == today }
+            .sumOf { it.pagesCount.toDouble() }.toFloat()
+
+        performanceRepository.recomputeTodayPerformance(sessions, totalPages)
     }
 
     fun updateGoalProgress(goalId: String, progress: Float) {

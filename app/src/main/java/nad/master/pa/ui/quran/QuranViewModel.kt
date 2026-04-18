@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nad.master.pa.data.local.QuranData
@@ -18,7 +19,9 @@ import nad.master.pa.data.model.QuranProgress
 import nad.master.pa.data.model.SurahData
 import nad.master.pa.data.model.SurahStatus
 import nad.master.pa.data.model.SurahTracking
+import nad.master.pa.data.repository.PerformanceRepository
 import nad.master.pa.data.repository.QuranRepository
+import nad.master.pa.data.repository.SessionRepository
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -43,7 +46,9 @@ data class QuranUiState(
 
 @HiltViewModel
 class QuranViewModel @Inject constructor(
-    private val quranRepository: QuranRepository
+    private val quranRepository: QuranRepository,
+    private val performanceRepository: PerformanceRepository,
+    private val sessionRepository: SessionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(QuranUiState())
@@ -93,10 +98,6 @@ class QuranViewModel @Inject constructor(
                 quranRepository.saveDailyPortion(portion)
                 
                 // Update overall progress total verses (approximate mapping)
-                // In a perfect system we'd track exactly which verses, but for "portion" 
-                // tracking 15 lines = 1 page is the standard heuristic.
-                // One page of standard Mushaf has ~15 lines and varying verses.
-                // We'll update the 'versesMemorized' count by a rough average of 10 verses per page.
                 val approxVerses = (pages * 10).toInt()
                 val newTotal = _uiState.value.progress.versesMemorized + approxVerses
                 
@@ -106,6 +107,14 @@ class QuranViewModel @Inject constructor(
                         lastSessionDate = today
                     )
                 )
+
+                // Trigger Performance Recompute
+                val sessions = sessionRepository.getTodaySessions().first()
+                val portions = quranRepository.getDailyPortions().first()
+                val todayPages = portions.filter { it.date == today }.sumOf { it.pagesCount.toDouble() }.toFloat() + pages
+                
+                performanceRepository.recomputeTodayPerformance(sessions, todayPages)
+
             } catch (e: Exception) {
                 Log.e("QuranVM", "logDailyPortion failed", e)
             }

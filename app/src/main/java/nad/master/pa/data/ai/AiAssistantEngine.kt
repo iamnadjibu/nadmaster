@@ -149,6 +149,61 @@ class AiAssistantEngine @Inject constructor() {
     }
 
     /**
+     * The unified entry point for AI control. Parses natural language into specific intents.
+     */
+    suspend fun processIntelligentCommand(
+        request: String,
+        contextJson: String
+    ): List<AiAction> = withContext(Dispatchers.IO) {
+        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        
+        val prompt = """
+            You are the "Master AI" for the NAD MASTER app. 
+            You have full control over the user's data. 
+            
+            TODAY: $today
+            APP CONTEXT: $contextJson
+            USER REQUEST: "$request"
+            
+            Analyze the request and decide what MUST change in the app state.
+            
+            POSSIBLE ACTIONS:
+            - ADD_SESSIONS: Data is a list of sessions (use scheduling logic).
+            - DELETE_SESSIONS: Data is a list of sessionIds.
+            - CLEAR_DAY: Data is a specific date string.
+            - UPDATE_PROFILE: Data is a map of profile fields (name, targetJuzz).
+            - CREATE_GOAL: Data is a goal object.
+            - LOG_QURAN: Data is a float "pages".
+            - ANALYZE: Data is a string message (conversational response).
+            
+            STRICT RULES:
+            1. RETURN ONLY A JSON ARRAY OF ACTIONS.
+            2. MULTIPLE ACTIONS: You can return multiple actions (e.g., Delete sessions AND Add new ones).
+            3. CONSISTENCY: Ensure all dates are yyyy-MM-dd.
+            
+            FORMAT EXAMPLE:
+            [
+              {"type": "DELETE_SESSIONS", "data": ["id1", "id2"]},
+              {"type": "ADD_SESSIONS", "data": [{"title": "Quick Study", "date": "$today", ...}]}
+            ]
+        """.trimIndent()
+
+        try {
+            val response = generativeModel.generateContent(prompt)
+            val rawText = response.text ?: ""
+            val jsonText = extractJsonArray(rawText)
+            
+            if (jsonText.isBlank()) return@withContext emptyList()
+            
+            val listType = object : TypeToken<List<AiAction>>() {}.type
+            gson.fromJson(jsonText, listType)
+        } catch (e: Exception) {
+            Log.e(TAG, "processIntelligentCommand FAILED", e)
+            emptyList()
+        }
+    }
+
+    /**
      * Extracts the first JSON array found in the text.
      */
     private fun extractJsonArray(text: String): String {
@@ -252,6 +307,11 @@ class AiAssistantEngine @Inject constructor() {
         return sdf.format(ts.toDate())
     }
 }
+
+data class AiAction(
+    val type: String,
+    val data: Any?
+)
 
 private data class AiMilestoneDto(
     val title: String,
