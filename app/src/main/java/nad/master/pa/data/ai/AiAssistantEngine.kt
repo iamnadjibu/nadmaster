@@ -32,7 +32,7 @@ class AiAssistantEngine @Inject constructor() {
 
     private val generativeModel by lazy {
         GenerativeModel(
-            modelName = "gemini-2.5-flash",
+            modelName = "gemini-3-flash",
             // The API key is securely compiled into the app via local.properties -> BuildConfig
             apiKey = BuildConfig.GEMINI_API_KEY,
             generationConfig = generationConfig {
@@ -44,7 +44,7 @@ class AiAssistantEngine @Inject constructor() {
 
     private val disciplineModel by lazy {
         GenerativeModel(
-            modelName = "gemini-2.5-flash",
+            modelName = "gemini-3-flash",
             apiKey = BuildConfig.GEMINI_API_KEY,
             generationConfig = generationConfig {
                 temperature = 0.5f
