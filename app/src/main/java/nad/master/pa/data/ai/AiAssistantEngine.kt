@@ -183,7 +183,7 @@ class AiAssistantEngine @Inject constructor() {
             response.text?.trim() ?: "Keep pushing forward!"
         } catch (e: Exception) {
             e.printStackTrace()
-            "Unable to generate discipline insights right now."
+            "AI DEBUG ERROR (Insight): ${e.localizedMessage ?: "Unknown failure"}"
         }
     }
 

@@ -70,7 +70,7 @@ class DashboardViewModel @Inject constructor(
                 val insight = aiAssistantEngine.analyzeDiscipline(completed, missed)
                 _uiState.value = _uiState.value.copy(disciplineInsight = insight)
             } catch (e: Exception) {
-                // Ignore silent PA failures
+                _uiState.value = _uiState.value.copy(disciplineInsight = "DEBUG ERROR (ViewModel): ${e.localizedMessage}")
             }
         }
     }
