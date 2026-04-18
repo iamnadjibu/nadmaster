@@ -162,5 +162,15 @@ class ScheduleViewModel @Inject constructor(
             }
         }
     }
+
+    fun updateSession(session: Session) {
+        viewModelScope.launch {
+            try {
+                sessionRepository.updateSession(session)
+            } catch (e: Exception) {
+                Log.e(TAG, "updateSession: FAILED", e)
+            }
+        }
+    }
 }
 

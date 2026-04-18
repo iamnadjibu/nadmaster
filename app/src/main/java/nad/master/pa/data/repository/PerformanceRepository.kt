@@ -59,7 +59,7 @@ class PerformanceRepository @Inject constructor(
             sessionsScheduled = scheduled,
             sessionsCompleted = completed,
             sessionsMissed = missed,
-            prayersCompleted = prayersCompleted,
+            prayersCompleted = prayers,
             tahajjudDone = tahajjud,
             quranVersesMemorized = quranVerses,
             disciplineScore = score

@@ -491,7 +491,7 @@ private fun SessionEditSheet(
                 text = "Session Details",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = LightCream)
             )
-            IconButton(onClick = onDelete) {
+            IconButton(onClick = { onDelete(session) }) {
                 Icon(Icons.Filled.Delete, "Delete", tint = CriticalRed)
             }
         }
@@ -548,8 +548,8 @@ private fun EditSessionSheet(
             colors = TextFieldDefaults.colors(
                 focusedTextColor = LightCream,
                 unfocusedTextColor = WarmCream,
-                unfocusedContainerColor = Transparent,
-                focusedContainerColor = Transparent
+                unfocusedContainerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent
             )
         )
 
@@ -562,8 +562,8 @@ private fun EditSessionSheet(
             colors = TextFieldDefaults.colors(
                 focusedTextColor = LightCream,
                 unfocusedTextColor = WarmCream,
-                unfocusedContainerColor = Transparent,
-                focusedContainerColor = Transparent
+                unfocusedContainerColor = Color.Transparent,
+                focusedContainerColor = Color.Transparent
             )
         )
 
