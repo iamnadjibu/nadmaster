@@ -450,16 +450,25 @@ private fun EmptyGoals(text: String) {
 @Composable
 private fun DisciplineInsightCard(insight: String) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = InfoBlue.copy(alpha = 0.15f)),
-        shape = RoundedCornerShape(12.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .border(1.dp, InfoBlue.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = MediumBrown.copy(alpha = 0.4f)),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.AutoAwesome, contentDescription = "AI Insight", tint = InfoBlue)
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = InfoBlue, modifier = Modifier.size(18.dp))
+                Text(
+                    text = "AI DISCIPLINE INSIGHT",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, color = InfoBlue, letterSpacing = 1.sp)
+                )
+            }
             Text(
                 text = insight,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LightCream
+                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                color = LightCream.copy(alpha = 0.9f)
             )
         }
     }

@@ -13,11 +13,18 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import nad.master.pa.notifications.SessionCompletionWorker
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 @Singleton
 class SessionRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    @ApplicationContext private val context: Context
 ) {
     private val uid: String
         get() {
@@ -61,6 +68,16 @@ class SessionRepository @Inject constructor(
         return getSessionsForDate(today)
     }
 
+    /** Get sessions between two dates (yyyy-MM-dd inclusive). Useful for multi-week planning. */
+    suspend fun getSessionsInRange(startDate: String, endDate: String): List<Session> {
+        return sessionsRef
+            .whereGreaterThanOrEqualTo("date", startDate)
+            .whereLessThanOrEqualTo("date", endDate)
+            .get()
+            .await()
+            .toObjects(Session::class.java)
+    }
+
     /** Update the status of a session. */
     suspend fun updateSessionStatus(sessionId: String, status: SessionStatus) {
         sessionsRef.document(sessionId)
@@ -71,18 +88,42 @@ class SessionRepository @Inject constructor(
     /** Add a new session. */
     suspend fun addSession(session: Session): String {
         val ref = sessionsRef.document()
-        ref.set(session.copy(id = ref.id)).await()
+        val newSession = session.copy(id = ref.id)
+        ref.set(newSession).await()
+        scheduleCompletionCheck(newSession)
         return ref.id
     }
 
     /** Delete a session. */
     suspend fun deleteSession(sessionId: String) {
         sessionsRef.document(sessionId).delete().await()
+        SessionCompletionWorker.cancelCheck(context, sessionId)
     }
 
     /** Update an existing session. */
     suspend fun updateSession(session: Session) {
         sessionsRef.document(session.id).set(session).await()
+        scheduleCompletionCheck(session)
+    }
+
+    private fun scheduleCompletionCheck(session: Session) {
+        if (session.status != SessionStatus.UPCOMING) {
+            SessionCompletionWorker.cancelCheck(context, session.id)
+            return
+        }
+        
+        val endTime = LocalDateTime.ofInstant(session.endTime.toDate().toInstant(), ZoneId.systemDefault())
+        val now = LocalDateTime.now()
+        val delay = Duration.between(now, endTime).toMinutes()
+        
+        if (delay > -60) { // Schedule if not older than an hour
+            SessionCompletionWorker.scheduleCompletionCheck(
+                context,
+                session.id,
+                session.title,
+                delay.coerceAtLeast(0)
+            )
+        }
     }
 
     /** Get sessions that were missed in the past N days. */

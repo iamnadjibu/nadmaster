@@ -71,7 +71,9 @@ class AiAssistantEngine @Inject constructor() {
             You are a Personal Assistant AI for the NAD MASTER app.
             Today's Date: $todayStr (Format yyyy-MM-dd)
             
-            USER ACTIVE HOURS: 04:00 to 22:00. Never schedule anything outside this window.
+            USER ACTIVE HOURS: 04:00 to 22:00. 
+            - Prioritize scheduling within this window.
+            - If strictly necessary to meet a deadline or if requested, you MAY schedule before 04:00 or after 22:00.
             
             EXISTING SCHEDULE:
             $existingBrief
@@ -81,7 +83,7 @@ class AiAssistantEngine @Inject constructor() {
             Analyze the request and generate an optimal schedule as a JSON array of Session objects.
             RULES:
             1. DO NOT OVERLOAD: Find free gaps in the existing schedule. Never overlap with existing fixed sessions.
-            2. ACTIVE WINDOW: Only schedule between 04:00 (4 AM) and 22:00 (10 PM).
+            2. PERIOD: Plan sessions from today up until the mentioned deadline or for a reasonable duration.
             3. REASONABLE DURATION: If time is implied but not stated, choose a reasonable time (e.g., study 1-2h).
             4. OUTPUT: Return only a JSON array matching this structure:
             [
@@ -116,6 +118,8 @@ class AiAssistantEngine @Inject constructor() {
                 val start = LocalDateTime.of(date, java.time.LocalTime.of(dto.startHour, dto.startMinute))
                 val end = LocalDateTime.of(date, java.time.LocalTime.of(dto.endHour, dto.endMinute))
                 
+                val isOddHour = dto.startHour < 4 || dto.endHour > 22 || (dto.endHour == 22 && dto.endMinute > 0)
+                
                 Session(
                     id = UUID.randomUUID().toString(),
                     title = dto.title,
@@ -128,6 +132,7 @@ class AiAssistantEngine @Inject constructor() {
                     weekId = nad.master.pa.data.scheduler.SchedulingEngine.getWeekId(date),
                     status = SessionStatus.UPCOMING,
                     isFixed = dto.type == "FIXED",
+                    needsConfirmation = isOddHour,
                     colorCode = "#D5CEA3"
                 )
             }

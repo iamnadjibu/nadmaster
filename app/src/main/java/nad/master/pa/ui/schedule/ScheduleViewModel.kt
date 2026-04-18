@@ -130,4 +130,37 @@ class ScheduleViewModel @Inject constructor(
     }
 
     fun getWeekInfo(offset: Int): WeekInfo = schedulingEngine.getWeekLabel(offset)
+
+    fun confirmSession(sessionId: String) {
+        viewModelScope.launch {
+            try {
+                // Clear the needsConfirmation flag
+                val session = _uiState.value.sessions.find { it.id == sessionId } ?: return@launch
+                sessionRepository.updateSession(session.copy(needsConfirmation = false))
+            } catch (e: Exception) {
+                Log.e(TAG, "confirmSession: FAILED", e)
+            }
+        }
+    }
+
+    fun declineSession(sessionId: String) {
+        viewModelScope.launch {
+            try {
+                sessionRepository.deleteSession(sessionId)
+            } catch (e: Exception) {
+                Log.e(TAG, "declineSession: FAILED", e)
+            }
+        }
+    }
+
+    fun deleteSession(sessionId: String) {
+        viewModelScope.launch {
+            try {
+                sessionRepository.deleteSession(sessionId)
+            } catch (e: Exception) {
+                Log.e(TAG, "deleteSession: FAILED", e)
+            }
+        }
+    }
 }
+

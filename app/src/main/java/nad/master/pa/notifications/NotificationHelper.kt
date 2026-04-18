@@ -21,10 +21,16 @@ class NotificationHelper @Inject constructor(
         const val CHANNEL_SESSIONS  = "nad_sessions"
         const val CHANNEL_PRAYERS   = "nad_prayers"
         const val CHANNEL_MOTIVATION= "nad_motivation"
+        const val CHANNEL_PROGRESS  = "nad_progress"
 
         const val NOTIF_SESSION  = 1001
         const val NOTIF_PRAYER   = 1002
         const val NOTIF_MOTIVATION = 1003
+        const val NOTIF_PROGRESS = 1004
+
+        const val ACTION_DONE = "nad.master.pa.ACTION_DONE"
+        const val ACTION_MISSED = "nad.master.pa.ACTION_MISSED"
+        const val EXTRA_SESSION_ID = "session_id"
     }
 
     fun createNotificationChannels() {
@@ -47,9 +53,49 @@ class NotificationHelper @Inject constructor(
                 CHANNEL_MOTIVATION,
                 "Motivation",
                 NotificationManager.IMPORTANCE_DEFAULT
-            ).apply { description = "Daily motivational messages" }
+            ).apply { description = "Daily motivational messages" },
+
+            NotificationChannel(
+                CHANNEL_PROGRESS,
+                "Progress Confirmation",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply { description = "Confirm if you completed your sessions" }
         )
         channels.forEach { manager.createNotificationChannel(it) }
+    }
+
+    fun showCompletionNotification(sessionTitle: String, sessionId: String) {
+        val doneIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = ACTION_DONE
+            putExtra(EXTRA_SESSION_ID, sessionId)
+        }
+        val donePendingIntent = PendingIntent.getBroadcast(
+            context, sessionId.hashCode(), doneIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val missedIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = ACTION_MISSED
+            putExtra(EXTRA_SESSION_ID, sessionId)
+        }
+        val missedPendingIntent = PendingIntent.getBroadcast(
+            context, sessionId.hashCode() + 1, missedIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_PROGRESS)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("✅ Session Finished: $sessionTitle")
+            .setContentText("Did you complete this session?")
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .addAction(android.R.drawable.checkbox_on_background, "Done", donePendingIntent)
+            .addAction(android.R.drawable.ic_delete, "Missed", missedPendingIntent)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(context).notify(sessionId.hashCode(), notification)
+        } catch (e: SecurityException) { }
     }
 
     fun showSessionReminder(sessionTitle: String, minutesBefore: Int) {

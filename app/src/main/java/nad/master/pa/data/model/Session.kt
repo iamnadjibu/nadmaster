@@ -20,7 +20,9 @@ data class Session(
     val date: String = "",          // "yyyy-MM-dd"
     val weekId: String = "",        // "yyyy-Www" (ISO week)
     val status: SessionStatus = SessionStatus.UPCOMING,
-    val isFixed: Boolean = false,   // Fixed sessions cannot be moved
+    val isFixed: Boolean = false,
+    val needsConfirmation: Boolean = false,
+    val isUserAdded: Boolean = false,
     val colorCode: String = "#D5CEA3",
     val notes: String = "",
     val notifyMinutesBefore: Int = 15,
